@@ -55,6 +55,29 @@ class EnhancedDataProcessorWithCleanup(EnhancedDataProcessor):
             logger.warning(f"Could not retrieve existing chunks: {e}")
             return {}
     
+    def get_processed_files_configs(self) -> Dict[str, str]:
+        """Get which config was used to process each file"""
+        try:
+            points = self.qdrant_client.scroll(
+                collection_name=self.collection_name,
+                limit=10000,
+                with_payload=True
+            )[0]
+            
+            file_configs = {}
+            for point in points:
+                source_file = point.payload.get('source_file', '')
+                config_used = point.payload.get('config_used', 'unknown')
+                if source_file and config_used:
+                    file_configs[source_file] = config_used
+            
+            logger.info(f"Found {len(file_configs)} files with config tracking")
+            return file_configs
+            
+        except Exception as e:
+            logger.warning(f"Could not retrieve file configs: {e}")
+            return {}
+    
     def get_current_files(self, data_dirs: List[str]) -> Set[str]:
         """Get set of current files in data directories"""
         current_files = set()
@@ -117,17 +140,49 @@ class EnhancedDataProcessorWithCleanup(EnhancedDataProcessor):
         logger.info(f"Cleanup completed: {cleanup_stats['chunks_deleted']} chunks deleted from {len(orphaned_files)} files")
         return cleanup_stats
     
-    def process_with_cleanup(self, data_dirs: List[str], content_types: List[str]) -> Dict[str, Any]:
-        """Process data with automatic cleanup of orphaned chunks"""
-        logger.info("Starting enhanced processing with cleanup...")
+    def get_smart_config_for_content_type(self, content_type: str, manual_config: str | None = None) -> str:
+        """Automatically select appropriate config based on content type"""
+        if manual_config:
+            return manual_config
+        
+        # Smart config selection based on content type
+        config_mapping = {
+            'transcript': 'video_transcript',  # Long-form video content
+            'ocr': 'presentation_text',        # Slide-based content
+            'manual': 'general_brewing'        # Default for manual text
+        }
+        
+        return config_mapping.get(content_type, 'general_brewing')
+    
+    def should_process_file(self, file_path: str, content_type: str, config_name: str) -> bool:
+        """Check if file should be processed (avoid duplicates)"""
+        processed_configs = self.get_processed_files_configs()
+        filename = os.path.basename(file_path)
+        
+        if filename in processed_configs:
+            existing_config = processed_configs[filename]
+            if existing_config == config_name:
+                logger.info(f"Skipping {filename} - already processed with {config_name}")
+                return False
+            else:
+                logger.info(f"Reprocessing {filename} - config changed from {existing_config} to {config_name}")
+                return True
+        
+        logger.info(f"Processing {filename} - new file")
+        return True
+    
+    def process_with_cleanup(self, data_dirs: List[str], content_types: List[str], manual_config: str | None = None) -> Dict[str, Any]:
+        """Process data with automatic cleanup of orphaned chunks and smart config selection"""
+        logger.info("Starting enhanced processing with cleanup and smart config selection...")
         
         # Step 1: Cleanup orphaned chunks
         cleanup_stats = self.cleanup_orphaned_chunks(data_dirs)
         
-        # Step 2: Process current files
+        # Step 2: Process current files with smart config selection
         all_chunks = []
         processing_stats = {
             'files_processed': 0,
+            'files_skipped': 0,
             'chunks_created': 0,
             'chunks_validated': 0,
             'chunks_rejected': 0
@@ -135,12 +190,37 @@ class EnhancedDataProcessorWithCleanup(EnhancedDataProcessor):
         
         for data_dir, content_type in zip(data_dirs, content_types):
             if os.path.exists(data_dir):
-                chunks = self.process_directory(data_dir, content_type)
-                all_chunks.extend(chunks)
+                # Get smart config for this content type
+                config_name = self.get_smart_config_for_content_type(content_type, manual_config)
+                logger.info(f"Using config '{config_name}' for {content_type} content in {data_dir}")
                 
-                # Update stats
-                stats = self.get_statistics()
-                processing_stats['files_processed'] += stats['files_processed']
+                # Get appropriate config
+                from chunking_configs import get_config
+                smart_config = get_config(config_name)
+                
+                # Create processor with smart config
+                smart_processor = EnhancedDataProcessor(smart_config)
+                
+                # Process files with deduplication
+                for filename in os.listdir(data_dir):
+                    if filename.lower().endswith('.txt'):
+                        file_path = os.path.join(data_dir, filename)
+                        
+                        if self.should_process_file(file_path, content_type, config_name):
+                            chunks = smart_processor.process_text_file(file_path, content_type)
+                            
+                            # Add config tracking to metadata
+                            for chunk_text, chunk_metadata in chunks:
+                                chunk_metadata['config_used'] = config_name
+                                chunk_metadata['content_type'] = content_type
+                            
+                            all_chunks.extend(chunks)
+                            processing_stats['files_processed'] += 1
+                        else:
+                            processing_stats['files_skipped'] += 1
+                
+                # Update stats from smart processor
+                stats = smart_processor.get_statistics()
                 processing_stats['chunks_created'] += stats['chunks_created']
                 processing_stats['chunks_validated'] += stats['chunks_validated']
                 processing_stats['chunks_rejected'] += stats['chunks_rejected']
@@ -196,8 +276,8 @@ class EnhancedDataProcessorWithCleanup(EnhancedDataProcessor):
             logger.error(f"Error uploading to Qdrant: {e}")
             raise
 
-def create_enhanced_embeddings_with_cleanup(config: ProcessingConfig | None = None):
-    """Create embeddings with automatic cleanup of orphaned chunks"""
+def create_enhanced_embeddings_with_cleanup(config: ProcessingConfig | None = None, manual_config: str | None = None):
+    """Create embeddings with automatic cleanup of orphaned chunks and smart config selection"""
     if config is None:
         config = ProcessingConfig()
     
@@ -221,12 +301,12 @@ def create_enhanced_embeddings_with_cleanup(config: ProcessingConfig | None = No
         logger.warning("No data directories found!")
         return
     
-    # Process with cleanup
-    summary = processor.process_with_cleanup(data_dirs, content_types)
+    # Process with cleanup and smart config selection
+    summary = processor.process_with_cleanup(data_dirs, content_types, manual_config)
     
     # Print summary
     print("\n" + "="*60)
-    print("ENHANCED PROCESSING WITH CLEANUP SUMMARY")
+    print("ENHANCED PROCESSING WITH CLEANUP AND SMART CONFIG SELECTION")
     print("="*60)
     
     print("\nCLEANUP STATISTICS:")
@@ -240,6 +320,7 @@ def create_enhanced_embeddings_with_cleanup(config: ProcessingConfig | None = No
     
     print("\nPROCESSING STATISTICS:")
     print(f"  Files processed: {summary['processing']['files_processed']}")
+    print(f"  Files skipped (already processed): {summary['processing']['files_skipped']}")
     print(f"  Chunks created: {summary['processing']['chunks_created']}")
     print(f"  Chunks validated: {summary['processing']['chunks_validated']}")
     print(f"  Chunks rejected: {summary['processing']['chunks_rejected']}")
@@ -251,11 +332,13 @@ def create_enhanced_embeddings_with_cleanup(config: ProcessingConfig | None = No
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description='Enhanced data processing with cleanup')
-    parser.add_argument('--config', type=str, default='general_brewing',
-                       help='Processing configuration preset')
+    parser = argparse.ArgumentParser(description='Enhanced data processing with cleanup and smart config selection')
+    parser.add_argument('--config', type=str, default=None,
+                       help='Manual config override (optional - auto-selected if not provided)')
     parser.add_argument('--cleanup-only', action='store_true',
                        help='Only perform cleanup, no processing')
+    parser.add_argument('--force-reprocess', action='store_true',
+                       help='Force reprocessing of all files (ignore deduplication)')
     
     args = parser.parse_args()
     
@@ -271,7 +354,5 @@ if __name__ == "__main__":
         cleanup_stats = processor.cleanup_orphaned_chunks(data_dirs)
         print("Cleanup completed:", cleanup_stats)
     else:
-        # Full processing with cleanup
-        from chunking_configs import get_config
-        config = get_config(args.config)
-        create_enhanced_embeddings_with_cleanup(config) 
+        # Full processing with smart config selection
+        create_enhanced_embeddings_with_cleanup(manual_config=args.config) 

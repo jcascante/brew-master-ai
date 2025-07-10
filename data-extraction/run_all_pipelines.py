@@ -77,8 +77,8 @@ def main():
     print(ocr_validator.generate_report(ocr_results))
 
     sep()
-    print(f"[7/7] Creating embeddings and uploading to Qdrant with cleanup (config: {args.config})...")
-    create_enhanced_embeddings_with_cleanup(config)
+    print(f"[7/7] Creating embeddings and uploading to Qdrant with smart config selection...")
+    create_enhanced_embeddings_with_cleanup(manual_config=args.config)
 
     sep()
     print("✅ All pipelines completed!\n")

@@ -34,6 +34,12 @@ This enhanced data processing pipeline provides advanced features for chunking s
 - **File tracking** using file paths as unique identifiers
 - **Cleanup reporting** with detailed statistics
 
+### 🧠 Smart Config Selection
+- **Automatic config selection** based on content type
+- **File-based deduplication** to prevent duplicate processing
+- **Config tracking** in metadata for transparency
+- **Manual override** available when needed
+
 ## 🏗️ Architecture
 
 ### Core Components
@@ -48,6 +54,8 @@ enhanced_processor.py      # Main processing pipeline
 enhanced_processor_with_cleanup.py  # Cleanup-enabled processor
 ├── EnhancedDataProcessorWithCleanup # Automatic cleanup capabilities
 ├── Orphaned chunk detection        # File-based tracking
+├── Smart config selection          # Content-type based config selection
+├── File deduplication              # Prevents duplicate processing
 └── Cleanup reporting               # Detailed statistics
 
 chunking_configs.py       # Configuration presets
@@ -112,7 +120,11 @@ python enhanced_main.py --transcribe-audio --validate
 # Create embeddings with specific configuration
 python enhanced_main.py --create-embeddings --config technical_brewing
 
-# Create embeddings with automatic cleanup
+# Create embeddings with smart config selection (recommended)
+python enhanced_processor_with_cleanup.py
+# Automatically uses 'video_transcript' for transcripts, 'presentation_text' for OCR
+
+# Manual config override
 python enhanced_processor_with_cleanup.py --config technical_brewing
 
 # Run only cleanup (no processing)
@@ -237,6 +249,70 @@ PROCESSING STATISTICS:
 
 Timestamp: 2024-01-15T10:30:45.123456
 ============================================================
+```
+
+## 🧠 Smart Config Selection
+
+The enhanced pipeline now includes intelligent config selection that automatically chooses the optimal chunking strategy for each content type.
+
+### How Smart Config Selection Works
+
+1. **Content Type Detection**: System identifies content type based on input folder
+2. **Automatic Config Mapping**: 
+   - `transcript` content → `video_transcript` config (longer chunks, more overlap)
+   - `ocr` content → `presentation_text` config (shorter chunks, focused)
+   - `manual` content → `general_brewing` config (balanced approach)
+3. **File Deduplication**: Tracks which files were processed with which config
+4. **Skip Logic**: Skips files already processed with the same config
+5. **Manual Override**: Allows manual config selection when needed
+
+### Smart Config Mapping
+
+| Content Type | Auto-Selected Config | Chunk Size | Overlap | Use Case |
+|--------------|---------------------|------------|---------|----------|
+| transcript   | video_transcript    | 1500       | 300     | Long-form video content |
+| ocr          | presentation_text   | 800        | 150     | Slide-based information |
+| manual       | general_brewing     | 1000       | 200     | General text content |
+
+### Benefits
+
+- **✅ No Duplicate Processing**: Files are only processed once per config
+- **✅ Optimal Chunking**: Each content type gets the best chunking strategy
+- **✅ Automatic Operation**: No manual config selection needed
+- **✅ Transparency**: Config used is tracked in metadata
+- **✅ Flexibility**: Manual override available when needed
+
+### Usage Examples
+
+```bash
+# Auto-config selection (recommended)
+python enhanced_processor_with_cleanup.py
+# Transcripts → video_transcript config
+# OCR → presentation_text config
+
+# Manual override
+python enhanced_processor_with_cleanup.py --config technical_brewing
+# All content uses technical_brewing config
+
+# Full pipeline with smart config
+python run_all_pipelines.py
+# Complete pipeline with automatic config selection
+```
+
+### Processing Report Example
+
+```
+PROCESSING STATISTICS:
+  Files processed: 8
+  Files skipped (already processed): 3
+  Chunks created: 24
+  Chunks validated: 22
+  Chunks rejected: 2
+  Total chunks uploaded: 22
+
+Configs used:
+  - video_transcript: 5 files (transcripts)
+  - presentation_text: 3 files (OCR)
 ```
 ```
 
