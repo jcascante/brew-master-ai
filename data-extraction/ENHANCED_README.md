@@ -63,6 +63,27 @@ data_validator.py         # Quality assessment tools
 enhanced_main.py          # Enhanced CLI interface
 ```
 
+## 📂 Input Folders
+
+The enhanced pipeline expects input data in the following folders:
+
+| Content Type | Input Folder               | Description                                 |
+|--------------|---------------------------|---------------------------------------------|
+| transcript   | data/transcripts/         | Video/audio transcriptions (from Whisper)   |
+| ocr          | data/presentation_texts/  | OCR text from presentation images (Tesseract)|
+| (raw video)  | data/videos/              | Raw video files (for extraction step only)  |
+| (audio)      | data/audios/              | Extracted audio files (for extraction only) |
+| (presentation)| data/presentations/      | PowerPoint files (for extraction only)      |
+| (images)     | data/presentation_images/ | Extracted images (for OCR step only)        |
+
+> **Note:** Only `data/transcripts/` and `data/presentation_texts/` are used as input for the enhanced embedding and cleanup pipeline. The other folders are used in earlier extraction steps.
+
+All enhanced processing configs (e.g., `general_brewing`, `technical_brewing`, `video_transcript`, `presentation_text`, etc.) use:
+- `data/transcripts/` for transcript content
+- `data/presentation_texts/` for OCR content
+
+The config determines **how** the text is chunked and processed, but **not** the input folder location.
+
 ## 🚀 Quick Start
 
 ### 1. Install Dependencies
