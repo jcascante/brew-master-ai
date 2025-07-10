@@ -28,6 +28,12 @@ This enhanced data processing pipeline provides advanced features for chunking s
 - **Configurable preprocessing** (stopword removal, lemmatization)
 - **Quality filtering** with minimum/maximum thresholds
 
+### 🗑️ Automatic Cleanup
+- **Orphaned chunk detection** when source files are deleted
+- **Automatic cleanup** of chunks from removed files
+- **File tracking** using file paths as unique identifiers
+- **Cleanup reporting** with detailed statistics
+
 ## 🏗️ Architecture
 
 ### Core Components
@@ -38,6 +44,11 @@ enhanced_processor.py      # Main processing pipeline
 ├── TextChunker          # Advanced chunking strategies
 ├── MetadataEnricher     # Metadata enhancement
 └── EnhancedDataProcessor # Main orchestrator
+
+enhanced_processor_with_cleanup.py  # Cleanup-enabled processor
+├── EnhancedDataProcessorWithCleanup # Automatic cleanup capabilities
+├── Orphaned chunk detection        # File-based tracking
+└── Cleanup reporting               # Detailed statistics
 
 chunking_configs.py       # Configuration presets
 ├── Content-type presets  # Video, presentation, recipe, etc.
@@ -79,6 +90,12 @@ python enhanced_main.py --transcribe-audio --validate
 
 # Create embeddings with specific configuration
 python enhanced_main.py --create-embeddings --config technical_brewing
+
+# Create embeddings with automatic cleanup
+python enhanced_processor_with_cleanup.py --config technical_brewing
+
+# Run only cleanup (no processing)
+python enhanced_processor_with_cleanup.py --cleanup-only
 
 # Validate existing data
 python enhanced_main.py --validate data/transcripts --report quality_report.txt --plots
@@ -141,6 +158,65 @@ python enhanced_main.py --transcribe-audio --validate
 python enhanced_main.py --extract-pptx-images
 python enhanced_main.py --ocr-images --validate
 python enhanced_main.py --create-embeddings --config balanced
+
+## 🗑️ Automatic Cleanup Functionality
+
+The enhanced pipeline now includes automatic cleanup capabilities that handle document deletion by removing orphaned chunks from the vector database.
+
+### How Cleanup Works
+
+1. **File Tracking**: The system tracks which files are currently in the data directories
+2. **Database Scan**: It scans the Qdrant database for existing chunks
+3. **Orphan Detection**: Identifies chunks from files that no longer exist
+4. **Automatic Removal**: Deletes orphaned chunks while preserving unchanged data
+5. **Reporting**: Provides detailed cleanup statistics
+
+### Cleanup Benefits
+
+- **Automatic Maintenance**: No manual cleanup required
+- **Data Consistency**: Ensures database reflects current file state
+- **Storage Efficiency**: Removes unnecessary orphaned data
+- **Process Simplification**: No need to move files to processed folders
+
+### Usage Examples
+
+```bash
+# Process with automatic cleanup (recommended)
+python enhanced_processor_with_cleanup.py --config general_brewing
+
+# Run only cleanup without processing
+python enhanced_processor_with_cleanup.py --cleanup-only
+
+# Full pipeline with cleanup
+python run_all_pipelines.py --config general_brewing
+```
+
+### Cleanup Report Example
+
+```
+============================================================
+ENHANCED PROCESSING WITH CLEANUP SUMMARY
+============================================================
+
+CLEANUP STATISTICS:
+  Files checked: 15
+  Files orphaned: 3
+  Chunks deleted: 24
+  Files cleaned:
+    - data/transcripts/old_file1.txt
+    - data/transcripts/old_file2.txt
+    - data/presentation_texts/outdated_slide.txt
+
+PROCESSING STATISTICS:
+  Files processed: 12
+  Chunks created: 156
+  Chunks validated: 152
+  Chunks rejected: 4
+  Total chunks uploaded: 152
+
+Timestamp: 2024-01-15T10:30:45.123456
+============================================================
+```
 ```
 
 ## 📊 Quality Metrics

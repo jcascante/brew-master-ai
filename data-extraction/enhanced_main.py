@@ -14,13 +14,11 @@ from enhanced_processor import create_enhanced_embeddings, ProcessingConfig
 from chunking_configs import get_config, list_available_configs, create_custom_config
 from data_validator import DataQualityAnalyzer
 
-def extract_audio(input_dir, output_dir, processed_dir):
+def extract_audio(input_dir, output_dir, processed_dir=None):
     """Extract audio from video files using ffmpeg"""
     import subprocess
-    import shutil
     
     os.makedirs(output_dir, exist_ok=True)
-    os.makedirs(processed_dir, exist_ok=True)
     
     for filename in os.listdir(input_dir):
         if filename.lower().endswith('.mp4'):
@@ -36,23 +34,16 @@ def extract_audio(input_dir, output_dir, processed_dir):
                 ], check=True, capture_output=True)
                 print(f'Audio saved to {output_path}')
                 
-                # Move processed video
-                processed_path = os.path.join(processed_dir, filename)
-                shutil.move(input_path, processed_path)
-                print(f'Moved {filename} to {processed_dir}')
-                
             except subprocess.CalledProcessError as e:
                 print(f'Error extracting audio from {filename}: {e}')
             except Exception as e:
                 print(f'Unexpected error processing {filename}: {e}')
 
-def transcribe_audio(audio_dir, transcript_dir, processed_audio_dir):
+def transcribe_audio(audio_dir, transcript_dir, processed_audio_dir=None):
     """Transcribe audio files using Whisper"""
     import whisper
-    import shutil
     
     os.makedirs(transcript_dir, exist_ok=True)
-    os.makedirs(processed_audio_dir, exist_ok=True)
     
     print("Loading Whisper model...")
     model = whisper.load_model('base')
@@ -70,21 +61,14 @@ def transcribe_audio(audio_dir, transcript_dir, processed_audio_dir):
                     f.write(result['text'])
                 print(f'Transcript saved to {transcript_path}')
                 
-                # Move processed audio
-                processed_path = os.path.join(processed_audio_dir, filename)
-                shutil.move(audio_path, processed_path)
-                print(f'Moved {filename} to {processed_audio_dir}')
-                
             except Exception as e:
                 print(f'Error transcribing {filename}: {e}')
 
-def extract_pptx_images(pptx_dir, images_dir, processed_pptx_dir):
+def extract_pptx_images(pptx_dir, images_dir, processed_pptx_dir=None):
     """Extract images from PowerPoint presentations"""
     from pptx import Presentation
-    import shutil
     
     os.makedirs(images_dir, exist_ok=True)
-    os.makedirs(processed_pptx_dir, exist_ok=True)
     
     for filename in os.listdir(pptx_dir):
         if filename.lower().endswith('.pptx'):
@@ -110,22 +94,15 @@ def extract_pptx_images(pptx_dir, images_dir, processed_pptx_dir):
                             print(f"Extracted image: {img_path}")
                             img_count += 1
                 
-                # Move processed pptx
-                processed_path = os.path.join(processed_pptx_dir, filename)
-                shutil.move(pptx_path, processed_path)
-                print(f"Moved {filename} to {processed_pptx_dir}")
-                
             except Exception as e:
                 print(f'Error processing {filename}: {e}')
 
-def ocr_images(images_dir, texts_dir, processed_images_dir):
+def ocr_images(images_dir, texts_dir, processed_images_dir=None):
     """Extract text from images using OCR"""
     import pytesseract
     from PIL import Image
-    import shutil
     
     os.makedirs(texts_dir, exist_ok=True)
-    os.makedirs(processed_images_dir, exist_ok=True)
     
     for filename in os.listdir(images_dir):
         if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
@@ -139,11 +116,6 @@ def ocr_images(images_dir, texts_dir, processed_images_dir):
                 with open(text_path, 'w', encoding='utf-8') as f:
                     f.write(text)
                 print(f'OCR text saved to {text_path}')
-                
-                # Move processed image
-                processed_path = os.path.join(processed_images_dir, filename)
-                shutil.move(image_path, processed_path)
-                print(f'Moved {filename} to {processed_images_dir}')
                 
             except Exception as e:
                 print(f'Error processing {filename}: {e}')
@@ -244,19 +216,19 @@ Examples:
     
     # Data extraction pipeline
     if args.extract_audio:
-        extract_audio('data/videos', 'data/audios', 'data/processed')
+        extract_audio('data/videos', 'data/audios')
     
     if args.transcribe_audio:
-        transcribe_audio('data/audios', 'data/transcripts', 'data/processed_audios')
+        transcribe_audio('data/audios', 'data/transcripts')
         if args.validate:
             print("\nValidating transcripts...")
             validate_data('data/transcripts', args.report, args.plots)
     
     if args.extract_pptx_images:
-        extract_pptx_images('data/presentations', 'data/presentation_images', 'data/processed_presentations')
+        extract_pptx_images('data/presentations', 'data/presentation_images')
     
     if args.ocr_images:
-        ocr_images('data/presentation_images', 'data/presentation_texts', 'data/processed_images')
+        ocr_images('data/presentation_images', 'data/presentation_texts')
         if args.validate:
             print("\nValidating OCR text...")
             validate_data('data/presentation_texts', args.report, args.plots)

@@ -29,6 +29,7 @@ from enhanced_main import extract_audio, transcribe_audio, extract_pptx_images, 
 from chunking_configs import get_config, list_available_configs
 from data_validator import DataQualityAnalyzer
 from enhanced_processor import create_enhanced_embeddings, EnhancedDataProcessor
+from enhanced_processor_with_cleanup import create_enhanced_embeddings_with_cleanup
 
 DATA_DIR = Path("data")
 
@@ -76,8 +77,8 @@ def main():
     print(ocr_validator.generate_report(ocr_results))
 
     sep()
-    print(f"[7/7] Creating embeddings and uploading to Qdrant (config: {args.config})...")
-    create_enhanced_embeddings(config)
+    print(f"[7/7] Creating embeddings and uploading to Qdrant with cleanup (config: {args.config})...")
+    create_enhanced_embeddings_with_cleanup(config)
 
     sep()
     print("✅ All pipelines completed!\n")
