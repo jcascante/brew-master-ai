@@ -2,6 +2,28 @@
 
 CLI tools for processing videos and PowerPoint presentations into searchable text for the Brew Master AI RAG system.
 
+## 🚀 Enhanced Processing Pipeline
+
+We now offer an **enhanced data processing pipeline** with advanced features:
+
+- **Advanced chunking strategies** with content-type specific presets
+- **Data validation and quality assessment** with brewing-specific analysis
+- **Enhanced metadata enrichment** with comprehensive content information
+- **Quality visualization tools** for data insights
+
+**📖 See [ENHANCED_README.md](ENHANCED_README.md) for the complete enhanced pipeline documentation.**
+
+## 🔄 Legacy vs Enhanced
+
+| Feature | Legacy Pipeline | Enhanced Pipeline |
+|---------|----------------|-------------------|
+| Chunking | Fixed 500-char chunks | Configurable strategies |
+| Validation | Basic file checks | Comprehensive quality scoring |
+| Metadata | Basic file info | Rich content analysis |
+| Quality | No assessment | Detailed quality reports |
+| Configuration | Hard-coded | Multiple presets |
+| Visualization | None | Quality plots and charts |
+
 ## 🎯 Purpose
 
 This module transforms raw multimedia content (videos and presentations) into structured text data that can be embedded and searched by the RAG system. It handles the complete pipeline from raw files to vector database upload.

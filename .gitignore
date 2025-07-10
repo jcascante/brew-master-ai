@@ -141,3 +141,7 @@ coverage.xml
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# API key test files
+backend/test_claude_api.py
+test_claude_api.py
