@@ -1,0 +1,143 @@
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Frontend build
+frontend/dist/
+frontend/build/
+
+# Data directories (contain processed files)
+data/
+data-extraction/data/
+backend/data/
+
+# Logs
+*.log
+logs/
+
+# Docker
+.dockerignore
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# API keys and secrets
+*.key
+*.pem
+secrets/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Vector database data
+vector-db/data/
+qdrant_data/
+
+# Model files (if cached locally)
+*.bin
+*.model
+models/
+
+# Audio/Video processing
+*.wav
+*.mp3
+*.mp4
+*.avi
+*.mov
+
+# Image files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+
+# Text files (transcripts, OCR results)
+*.txt
+!README.md
+!requirements.txt
+!package.json
+!package-lock.json
+
+# PowerPoint files
+*.pptx
+*.ppt
+
+# Jupyter notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json

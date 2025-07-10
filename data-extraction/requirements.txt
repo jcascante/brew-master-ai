@@ -1,0 +1,15 @@
+# Core data extraction dependencies
+python-pptx>=0.6.21
+pytesseract>=0.3.10
+Pillow>=9.0.0
+
+# Audio transcription
+openai-whisper>=20231117
+# Alternative: faster-whisper>=0.9.0
+
+# Vector database and embeddings
+sentence-transformers>=2.2.2
+qdrant-client>=1.7.0
+
+# Utilities
+python-dotenv>=1.0.0
