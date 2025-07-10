@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Query, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from sentence_transformers import SentenceTransformer
@@ -19,6 +20,15 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],  # Frontend URLs
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Global variables for model and client
 model: Optional[SentenceTransformer] = None
 qdrant_client: Optional[QdrantClient] = None
@@ -27,12 +37,15 @@ COLLECTION_NAME = "brew_master_ai"
 
 class ChatRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=1000, description="The search query")
+    conversation_context: Optional[str] = Field(default="", description="Previous conversation context")
     top_k: int = Field(default=3, ge=1, le=20, description="Number of results to return")
 
 class ChatResponse(BaseModel):
     answer: str
     sources: List[dict]
     query: str
+    confidence_score: float
+    response_quality: str
 
 class ChunkResult(BaseModel):
     score: float
@@ -100,24 +113,110 @@ async def get_relevant_chunks(query: str, top_k: int) -> List[ChunkResult]:
     
     return formatted_results
 
-async def generate_rag_response(query: str, chunks: List[ChunkResult]) -> str:
-    """Generate RAG response using Claude API"""
+def format_fallback_response(query: str, chunks: List[ChunkResult], conversation_context: str = "") -> str:
+    """Format raw chunks into a structured, readable fallback response"""
+    
+    # Start with a friendly introduction
+    response_parts = [
+        f"🍺 **Brew Master AI Response**\n",
+        f"*Query: {query}*\n"
+    ]
+    
+    # Add conversation context if available
+    if conversation_context:
+        response_parts.append(f"\n📝 **Previous Context**:\n{conversation_context}\n")
+    
+    # Add main content with structured formatting
+    response_parts.append(f"\n🔍 **Relevant Information Found**:\n")
+    
+    # Group chunks by source file for better organization
+    chunks_by_source = {}
+    for chunk in chunks:
+        source = chunk.source_file
+        if source not in chunks_by_source:
+            chunks_by_source[source] = []
+        chunks_by_source[source].append(chunk)
+    
+    # Format each source's chunks
+    for source_file, source_chunks in chunks_by_source.items():
+        # Calculate average confidence for this source
+        avg_confidence = sum(chunk.score for chunk in source_chunks) / len(source_chunks)
+        
+        response_parts.append(f"\n📄 **Source: {source_file}** ({(avg_confidence * 100):.1f}% match)")
+        
+        for i, chunk in enumerate(source_chunks, 1):
+            # Clean and format the text
+            clean_text = chunk.text.strip()
+            if clean_text:
+                # Add bullet point and format the text
+                formatted_text = f"  • {clean_text}"
+                response_parts.append(formatted_text)
+    
+    # Add summary and tips
+    response_parts.append(f"\n💡 **Summary**:")
+    response_parts.append(f"  • Found {len(chunks)} relevant information chunks")
+    response_parts.append(f"  • Sources: {', '.join(chunks_by_source.keys())}")
+    response_parts.append(f"  • Average confidence: {(sum(chunk.score for chunk in chunks) / len(chunks) * 100):.1f}%")
+    
+    # Add note about Claude API
+    response_parts.append(f"\n⚠️ **Note**: This is a fallback response. For more polished answers, please configure the Claude API key.")
+    
+    return "\n".join(response_parts)
+
+def calculate_confidence_score(chunks: List[ChunkResult], query_length: int) -> tuple[float, str]:
+    """Calculate confidence score and response quality based on chunks and query"""
+    
+    if not chunks:
+        return 0.0, "No relevant information found"
+    
+    # Calculate average similarity score
+    avg_similarity = sum(chunk.score for chunk in chunks) / len(chunks)
+    
+    # Calculate coverage (how much information we have)
+    total_content_length = sum(len(chunk.text) for chunk in chunks)
+    coverage_score = min(total_content_length / (query_length * 10), 1.0)  # Normalize coverage
+    
+    # Calculate diversity (how many different sources)
+    unique_sources = len(set(chunk.source_file for chunk in chunks))
+    diversity_score = min(unique_sources / 3, 1.0)  # Normalize diversity
+    
+    # Combine scores with weights
+    confidence_score = (avg_similarity * 0.6 + coverage_score * 0.3 + diversity_score * 0.1)
+    
+    # Determine response quality
+    if confidence_score >= 0.8:
+        quality = "Excellent"
+    elif confidence_score >= 0.6:
+        quality = "Good"
+    elif confidence_score >= 0.4:
+        quality = "Fair"
+    else:
+        quality = "Limited"
+    
+    return confidence_score, quality
+
+async def generate_rag_response(query: str, chunks: List[ChunkResult], conversation_context: str = "") -> str:
+    """Generate RAG response using Claude API with conversation context"""
     if claude_client is None:
-        # Fallback: return just the chunks if Claude is not available
-        return f"Query: {query}\n\nRelevant information:\n" + "\n\n".join([f"From {chunk.source_file}: {chunk.text}" for chunk in chunks])
+        # Use the new formatted fallback response
+        return format_fallback_response(query, chunks, conversation_context)
     
     # Prepare context from chunks
     context = "\n\n".join([f"Source: {chunk.source_file}\nContent: {chunk.text}" for chunk in chunks])
     
-    # Create prompt for Claude
+    # Create prompt for Claude with conversation context
+    conversation_prompt = ""
+    if conversation_context:
+        conversation_prompt = f"\n\nPrevious conversation context:\n{conversation_context}"
+    
     prompt = f"""You are a helpful assistant for beer brewing knowledge. Use the following context to answer the user's question. If the context doesn't contain enough information to answer the question, say so.
 
 Context:
-{context}
+{context}{conversation_prompt}
 
 User Question: {query}
 
-Please provide a clear, helpful answer based on the context provided. If you reference information from the context, mention the source file."""
+Please provide a clear, helpful answer based on the context provided. If you reference information from the context, mention the source file. If this question relates to previous conversation context, acknowledge that connection."""
 
     try:
         model_name = os.getenv("CLAUDE_MODEL", "claude-3-haiku-20240307")
@@ -134,8 +233,8 @@ Please provide a clear, helpful answer based on the context provided. If you ref
         
     except Exception as e:
         logger.error(f"Claude API error: {str(e)}")
-        # Fallback response
-        return f"Query: {query}\n\nRelevant information:\n" + "\n\n".join([f"From {chunk.source_file}: {chunk.text}" for chunk in chunks])
+        # Use the same formatted fallback response
+        return format_fallback_response(query, chunks, conversation_context)
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
@@ -157,8 +256,12 @@ async def chat(request: ChatRequest):
                 query=request.query
             )
         
-        # Generate RAG response
-        answer = await generate_rag_response(request.query, chunks)
+        # Generate RAG response with conversation context
+        conversation_context = request.conversation_context or ""
+        answer = await generate_rag_response(request.query, chunks, conversation_context)
+        
+        # Calculate confidence score and response quality
+        confidence_score, response_quality = calculate_confidence_score(chunks, len(request.query))
         
         # Format sources for response
         sources = [
@@ -170,12 +273,14 @@ async def chat(request: ChatRequest):
             for chunk in chunks
         ]
         
-        logger.info(f"Generated response for query with {len(chunks)} sources")
+        logger.info(f"Generated response for query with {len(chunks)} sources, confidence: {confidence_score:.2f}")
         
         return ChatResponse(
             answer=answer,
             sources=sources,
-            query=request.query
+            query=request.query,
+            confidence_score=confidence_score,
+            response_quality=response_quality
         )
         
     except UnexpectedResponse as e:

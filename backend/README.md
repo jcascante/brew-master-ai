@@ -18,6 +18,9 @@ This module serves as the core API layer that:
 - **Context Integration**: Combine retrieved chunks with user queries
 - **Natural Responses**: Generate human-like answers using Claude API
 - **Source Attribution**: Provide transparency about information sources
+- **Confidence Scoring**: Assess response quality and relevance
+- **Conversation Context**: Maintain session history for better follow-ups
+- **Structured Fallbacks**: Graceful degradation when Claude API unavailable
 
 ### ⚡ Performance & Scalability
 - **Async Operations**: Non-blocking I/O for high concurrency
@@ -103,7 +106,10 @@ Content-Type: application/json
       "text_preview": "The brewing process begins with malting..."
     }
   ],
-  "query": "What is the basic process of brewing beer?"
+  "confidence": 0.92,
+  "quality": "high",
+  "query": "What is the basic process of brewing beer?",
+  "conversation_id": "session_123"
 }
 ```
 
