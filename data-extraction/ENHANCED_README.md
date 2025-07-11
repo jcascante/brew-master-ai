@@ -9,6 +9,7 @@ This enhanced data processing pipeline provides advanced features for chunking s
 - **Content-type specific presets** (video transcripts, presentations, recipes, etc.)
 - **Quality-based configurations** (high quality, balanced, fast processing)
 - **Custom chunking parameters** for fine-tuning
+- **Separate preprocessing and chunking configs** for maximum flexibility
 
 ### 🔍 Data Validation & Quality Assessment
 - **Comprehensive text validation** with quality scoring
@@ -59,7 +60,9 @@ enhanced_processor_with_cleanup.py  # Cleanup-enabled processor
 └── Cleanup reporting               # Detailed statistics
 
 chunking_configs.py       # Configuration presets
-├── Content-type presets  # Video, presentation, recipe, etc.
+├── Preprocessing presets # Light, standard, aggressive, technical
+├── Chunking presets      # Video, presentation, recipe, etc.
+├── Combined presets      # Preprocessing + chunking combinations
 ├── Quality presets       # High, balanced, fast
 └── Custom config builder # Fine-tuned configurations
 
@@ -134,9 +137,20 @@ python enhanced_processor_with_cleanup.py --cleanup-only
 python enhanced_main.py --validate data/transcripts --report quality_report.txt --plots
 ```
 
-## 📋 Configuration Presets
+## 📋 Configuration Options
 
-### Content-Type Presets
+The enhanced pipeline offers separate preprocessing and chunking configurations for maximum flexibility:
+
+### Preprocessing Presets
+
+| Preset | Description | Text Cleaning | Stopwords | Lemmatize | Case | Numbers |
+|--------|-------------|---------------|-----------|-----------|------|---------|
+| `light_preprocessing` | Minimal changes | ✅ | ❌ | ❌ | Lower | Keep |
+| `standard_preprocessing` | Balanced cleaning | ✅ | ❌ | ❌ | Lower | Keep |
+| `aggressive_preprocessing` | Heavy cleaning | ✅ | ✅ | ✅ | Lower | Remove |
+| `technical_preprocessing` | Preserve technical terms | ✅ | ❌ | ❌ | Preserve | Keep |
+
+### Chunking Presets
 
 | Preset | Max Chunk | Overlap | Use Case |
 |--------|-----------|---------|----------|
@@ -147,6 +161,20 @@ python enhanced_main.py --validate data/transcripts --report quality_report.txt 
 | `faq_content` | 600 | 100 | Q&A format content |
 | `historical_content` | 1800 | 350 | Narrative historical content |
 | `equipment_specs` | 1000 | 200 | Technical specifications |
+| `fast_chunking` | 800 | 100 | Character-based, fast processing |
+
+### Combined Presets (Preprocessing + Chunking)
+
+| Preset | Preprocessing | Chunking | Use Case |
+|--------|---------------|----------|----------|
+| `video_transcript` | light_preprocessing | video_transcript | Video content |
+| `presentation_text` | standard_preprocessing | presentation_text | Slide content |
+| `technical_brewing` | technical_preprocessing | technical_brewing | Technical content |
+| `general_brewing` | standard_preprocessing | general_brewing | General content |
+| `recipe_content` | light_preprocessing | recipe_content | Recipe content |
+| `faq_content` | aggressive_preprocessing | faq_content | FAQ content |
+| `historical_content` | light_preprocessing | historical_content | Historical content |
+| `equipment_specs` | technical_preprocessing | equipment_specs | Equipment specs |
 
 ### Quality Presets
 
@@ -158,7 +186,31 @@ python enhanced_main.py --validate data/transcripts --report quality_report.txt 
 
 ## 🔧 Advanced Usage
 
-### Custom Chunking Configuration
+### Custom Configuration Combinations
+
+```python
+# Create custom preprocessing + chunking combination
+from chunking_configs import create_custom_combination
+config = create_custom_combination('technical_preprocessing', 'video_transcript')
+create_enhanced_embeddings_with_cleanup(config)
+
+# Create fully custom configuration
+from chunking_configs import create_custom_config
+config = create_custom_config(
+    # Preprocessing settings
+    clean_text=True, remove_stopwords=False, lemmatize=False,
+    min_text_length=100, max_text_length=15000,
+    normalize_unicode=True, remove_special_chars=False,
+    lowercase=False, remove_numbers=False, remove_punctuation=False,
+    # Chunking settings
+    max_chunk_size=1500, min_chunk_size=200, overlap_size=300,
+    chunk_by_sentences=True, preserve_paragraphs=True,
+    max_sentences_per_chunk=15, respect_sentence_boundaries=True,
+    smart_boundaries=True
+)
+```
+
+### Custom Chunking Configuration (Legacy)
 
 ```bash
 # Create embeddings with custom parameters
@@ -250,6 +302,23 @@ PROCESSING STATISTICS:
 Timestamp: 2024-01-15T10:30:45.123456
 ============================================================
 ```
+
+## 🎯 Benefits of Separate Configurations
+
+The new separate preprocessing and chunking configuration system provides maximum flexibility:
+
+### Key Benefits
+- **Mix and Match**: Combine any preprocessing strategy with any chunking strategy
+- **Content Optimization**: Use light preprocessing for technical content with detailed chunking
+- **Speed Control**: Fast preprocessing with detailed chunking (or vice versa)
+- **Fine-grained Control**: Precise control over every aspect of the pipeline
+- **Future-proof**: Easy to add new preprocessing or chunking strategies independently
+
+### Practical Examples
+- **Technical Documents**: `technical_preprocessing` + `technical_brewing` (preserve case/numbers + medium chunks)
+- **Video Transcripts**: `light_preprocessing` + `video_transcript` (minimal changes + long chunks)
+- **Fast Processing**: `aggressive_preprocessing` + `fast_chunking` (heavy cleaning + character-based)
+- **High Quality**: `light_preprocessing` + `technical_brewing` (preserve original + detailed chunking)
 
 ## 🧠 Smart Config Selection
 

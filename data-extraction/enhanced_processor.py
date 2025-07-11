@@ -33,7 +33,22 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 @dataclass
-class ChunkConfig:
+class PreprocessingConfig:
+    """Configuration for text preprocessing and validation"""
+    clean_text: bool = True
+    remove_stopwords: bool = False
+    lemmatize: bool = False
+    min_text_length: int = 50
+    max_text_length: int = 10000
+    language: str = 'english'
+    normalize_unicode: bool = True
+    remove_special_chars: bool = False
+    lowercase: bool = True
+    remove_numbers: bool = False
+    remove_punctuation: bool = False
+
+@dataclass
+class ChunkingConfig:
     """Configuration for text chunking strategies"""
     max_chunk_size: int = 1000
     min_chunk_size: int = 100
@@ -41,21 +56,73 @@ class ChunkConfig:
     chunk_by_sentences: bool = True
     preserve_paragraphs: bool = True
     max_sentences_per_chunk: int = 10
+    respect_sentence_boundaries: bool = True
+    smart_boundaries: bool = True
 
 @dataclass
 class ProcessingConfig:
-    """Configuration for data processing"""
-    chunk_config: ChunkConfig = None
-    clean_text: bool = True
-    remove_stopwords: bool = False
-    lemmatize: bool = False
-    min_text_length: int = 50
-    max_text_length: int = 10000
-    language: str = 'english'
+    """Configuration for data processing with separate preprocessing and chunking configs"""
+    preprocessing: PreprocessingConfig = None
+    chunking: ChunkingConfig = None
     
     def __post_init__(self):
-        if self.chunk_config is None:
-            self.chunk_config = ChunkConfig()
+        if self.preprocessing is None:
+            self.preprocessing = PreprocessingConfig()
+        if self.chunking is None:
+            self.chunking = ChunkingConfig()
+    
+    # Backward compatibility properties
+    @property
+    def clean_text(self) -> bool:
+        return self.preprocessing.clean_text
+    
+    @property
+    def remove_stopwords(self) -> bool:
+        return self.preprocessing.remove_stopwords
+    
+    @property
+    def lemmatize(self) -> bool:
+        return self.preprocessing.lemmatize
+    
+    @property
+    def min_text_length(self) -> int:
+        return self.preprocessing.min_text_length
+    
+    @property
+    def max_text_length(self) -> int:
+        return self.preprocessing.max_text_length
+    
+    @property
+    def language(self) -> str:
+        return self.preprocessing.language
+    
+    @property
+    def chunk_config(self) -> ChunkingConfig:
+        return self.chunking
+    
+    @property
+    def max_chunk_size(self) -> int:
+        return self.chunking.max_chunk_size
+    
+    @property
+    def min_chunk_size(self) -> int:
+        return self.chunking.min_chunk_size
+    
+    @property
+    def overlap_size(self) -> int:
+        return self.chunking.overlap_size
+    
+    @property
+    def chunk_by_sentences(self) -> bool:
+        return self.chunking.chunk_by_sentences
+    
+    @property
+    def preserve_paragraphs(self) -> bool:
+        return self.chunking.preserve_paragraphs
+    
+    @property
+    def max_sentences_per_chunk(self) -> int:
+        return self.chunking.max_sentences_per_chunk
 
 class DataValidator:
     """Validates and cleans text data"""
@@ -153,7 +220,7 @@ class DataValidator:
 class TextChunker:
     """Advanced text chunking with multiple strategies"""
     
-    def __init__(self, config: ChunkConfig):
+    def __init__(self, config: ChunkingConfig):
         self.config = config
         self._setup_nlp()
     
@@ -520,15 +587,17 @@ if __name__ == "__main__":
     
     if args.create_embeddings:
         config = ProcessingConfig(
-            chunk_config=ChunkConfig(
+            preprocessing=PreprocessingConfig(
+                clean_text=args.clean_text,
+                remove_stopwords=args.remove_stopwords,
+                lemmatize=args.lemmatize
+            ),
+            chunking=ChunkingConfig(
                 max_chunk_size=args.chunk_size,
                 overlap_size=args.overlap,
                 min_chunk_size=args.min_chunk,
                 max_sentences_per_chunk=args.max_sentences
-            ),
-            clean_text=args.clean_text,
-            remove_stopwords=args.remove_stopwords,
-            lemmatize=args.lemmatize
+            )
         )
         
         create_enhanced_embeddings(config) 
