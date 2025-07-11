@@ -13,6 +13,7 @@ from pathlib import Path
 from enhanced_processor import create_enhanced_embeddings, ProcessingConfig
 from chunking_configs import get_config, list_available_configs, create_custom_config
 from data_validator import DataQualityAnalyzer
+from config_loader import ConfigLoader, create_argument_parser
 
 def extract_audio(input_dir, output_dir, processed_dir=None):
     """Extract audio from video files using ffmpeg"""
@@ -42,27 +43,66 @@ def extract_audio(input_dir, output_dir, processed_dir=None):
 def transcribe_audio(audio_dir, transcript_dir, processed_audio_dir=None):
     """Transcribe audio files using Whisper"""
     import whisper
+    import time
+    from pathlib import Path
     
     os.makedirs(transcript_dir, exist_ok=True)
     
+    # Get all WAV files
+    wav_files = [f for f in os.listdir(audio_dir) if f.lower().endswith('.wav')]
+    total_files = len(wav_files)
+    
+    if total_files == 0:
+        print("No WAV files found in audio directory!")
+        return
+    
+    print(f"Found {total_files} WAV files to transcribe")
     print("Loading Whisper model...")
     model = whisper.load_model('base')
+    print("Model loaded successfully!")
     
-    for filename in os.listdir(audio_dir):
-        if filename.lower().endswith('.wav'):
-            audio_path = os.path.join(audio_dir, filename)
-            base = os.path.splitext(filename)[0]
-            transcript_path = os.path.join(transcript_dir, base + '.txt')
+    # Process files one by one with progress
+    for i, filename in enumerate(wav_files, 1):
+        audio_path = os.path.join(audio_dir, filename)
+        base = os.path.splitext(filename)[0]
+        transcript_path = os.path.join(transcript_dir, base + '.txt')
+        
+        # Check if transcript already exists
+        if os.path.exists(transcript_path):
+            print(f"[{i}/{total_files}] Skipping {filename} (transcript already exists)")
+            continue
+        
+        # Get file size for progress info
+        file_size_mb = os.path.getsize(audio_path) / (1024 * 1024)
+        
+        print(f"\n[{i}/{total_files}] Transcribing {filename} ({file_size_mb:.1f} MB)...")
+        print(f"  Input: {audio_path}")
+        print(f"  Output: {transcript_path}")
+        
+        start_time = time.time()
+        
+        try:
+            print("  Starting transcription...")
+            result = model.transcribe(audio_path)
             
-            print(f'Transcribing {filename}...')
-            try:
-                result = model.transcribe(audio_path)
-                with open(transcript_path, 'w', encoding='utf-8') as f:
-                    f.write(result['text'])
-                print(f'Transcript saved to {transcript_path}')
-                
-            except Exception as e:
-                print(f'Error transcribing {filename}: {e}')
+            # Save transcript
+            with open(transcript_path, 'w', encoding='utf-8') as f:
+                f.write(result['text'])
+            
+            # Calculate timing
+            elapsed_time = time.time() - start_time
+            words = len(result['text'].split())
+            
+            print(f"  ✅ Success! Transcript saved to {transcript_path}")
+            print(f"  📊 Stats: {words} words, {elapsed_time:.1f} seconds ({elapsed_time/60:.1f} minutes)")
+            print(f"  ⚡ Speed: {words/elapsed_time:.1f} words/second")
+            
+        except Exception as e:
+            print(f"  ❌ Error transcribing {filename}: {e}")
+            # Continue with next file instead of stopping
+    
+    print(f"\n🎉 Transcription complete! Processed {total_files} files.")
+    print(f"Transcripts saved to: {transcript_dir}")
 
 def extract_pptx_images(pptx_dir, images_dir, processed_pptx_dir=None):
     """Extract images from PowerPoint presentations"""
@@ -142,29 +182,10 @@ def validate_data(directory_path, output_report=None, create_plots=False):
     return results
 
 def main():
-    parser = argparse.ArgumentParser(
-        description='Enhanced Brew Master AI Data Extraction CLI',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  # Extract audio from videos
-  python enhanced_main.py --extract-audio
-  
-  # Transcribe audio with quality validation
-  python enhanced_main.py --transcribe-audio --validate
-  
-  # Create embeddings with custom chunking
-  python enhanced_main.py --create-embeddings --config technical_brewing
-  
-  # Validate existing data
-  python enhanced_main.py --validate data/transcripts --report quality_report.txt
-  
-  # List available configurations
-  python enhanced_main.py --list-configs
-        """
-    )
+    # Create argument parser with config override options
+    parser = create_argument_parser()
     
-    # Data extraction commands
+    # Add our specific arguments
     parser.add_argument('--extract-audio', action='store_true', 
                        help='Extract audio from videos')
     parser.add_argument('--transcribe-audio', action='store_true', 
@@ -177,8 +198,6 @@ Examples:
     # Enhanced embedding creation
     parser.add_argument('--create-embeddings', action='store_true', 
                        help='Create enhanced embeddings and upload to Qdrant')
-    parser.add_argument('--config', type=str, default='general_brewing',
-                       help='Chunking configuration preset (use --list-configs to see options)')
     
     # Data validation
     parser.add_argument('--validate', type=str, metavar='DIRECTORY',
@@ -192,17 +211,13 @@ Examples:
     parser.add_argument('--list-configs', action='store_true',
                        help='List available chunking configurations')
     
-    # Custom chunking parameters
-    parser.add_argument('--chunk-size', type=int, metavar='SIZE',
-                       help='Custom maximum chunk size in characters')
-    parser.add_argument('--overlap', type=int, metavar='SIZE',
-                       help='Custom overlap size between chunks')
-    parser.add_argument('--min-chunk', type=int, metavar='SIZE',
-                       help='Custom minimum chunk size')
-    parser.add_argument('--max-sentences', type=int, metavar='COUNT',
-                       help='Custom maximum sentences per chunk')
+
     
     args = parser.parse_args()
+    
+    # Load configuration (YAML file + command-line overrides)
+    loader = ConfigLoader()
+    config = loader.load_config(args)
     
     # List configurations
     if args.list_configs:
@@ -216,22 +231,26 @@ Examples:
     
     # Data extraction pipeline
     if args.extract_audio:
-        extract_audio('data/videos', 'data/audios')
+        print(f"Extracting audio from {config.videos_dir} to {config.audios_dir}")
+        extract_audio(config.videos_dir, config.audios_dir)
     
     if args.transcribe_audio:
-        transcribe_audio('data/audios', 'data/transcripts')
+        print(f"Transcribing audio from {config.audios_dir} to {config.transcripts_dir}")
+        transcribe_audio(config.audios_dir, config.transcripts_dir)
         if args.validate:
             print("\nValidating transcripts...")
-            validate_data('data/transcripts', args.report, args.plots)
+            validate_data(config.transcripts_dir, args.report, args.plots)
     
     if args.extract_pptx_images:
-        extract_pptx_images('data/presentations', 'data/presentation_images')
+        print(f"Extracting images from {config.presentations_dir} to {config.images_dir}")
+        extract_pptx_images(config.presentations_dir, config.images_dir)
     
     if args.ocr_images:
-        ocr_images('data/presentation_images', 'data/presentation_texts')
+        print(f"Running OCR on {config.images_dir} to {config.presentation_texts_dir}")
+        ocr_images(config.images_dir, config.presentation_texts_dir)
         if args.validate:
             print("\nValidating OCR text...")
-            validate_data('data/presentation_texts', args.report, args.plots)
+            validate_data(config.presentation_texts_dir, args.report, args.plots)
     
     # Create enhanced embeddings
     if args.create_embeddings:

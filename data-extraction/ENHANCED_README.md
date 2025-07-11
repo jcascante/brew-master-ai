@@ -95,46 +95,169 @@ All enhanced processing configs (e.g., `general_brewing`, `technical_brewing`, `
 
 The config determines **how** the text is chunked and processed, but **not** the input folder location.
 
-## 🚀 Quick Start
+## 🏗️ Three-Stage Configuration System
 
-### 1. Install Dependencies
+The enhanced pipeline now uses a **three-stage configuration system** for maximum flexibility and clarity:
 
-```bash
-cd data-extraction
-pip install -r requirements.txt
+### 1. Input Processing Config (`InputProcessingConfig`)
+- Handles raw input files (videos, audio, images, presentations)
+- Controls extraction, transcription, and OCR settings
+- Example: Whisper model, audio sample rate, OCR language, image preprocessing
 
-# Optional: Install spaCy model for better sentence segmentation
-python -m spacy download en_core_web_sm
+### 2. Preprocessing Config (`PreprocessingConfig`)
+- Handles text cleaning, normalization, and validation
+- Example: Remove stopwords, lemmatize, case normalization, min/max text length
+
+### 3. Text Processing Config (`TextProcessingConfig`)
+- Handles chunking, embedding generation, and vector store loading
+- Example: Chunk size, overlap, embedding model, vector DB settings
+
+### 🔄 How It Works
+- **InputProcessingConfig**: Raw file → Text (transcription, OCR, etc.)
+- **PreprocessingConfig**: Text cleaning/normalization
+- **TextProcessingConfig**: Text → Embeddings (chunking, embedding, vector store)
+
+### 🧩 Example: Creating a Custom Three-Stage Config
+```python
+from chunking_configs import create_custom_combination
+
+# Choose presets for each stage
+config = create_custom_combination(
+    input_preset='technical_input',
+    preprocessing_preset='technical_preprocessing',
+    text_preset='technical_brewing'
+)
+
+# Use in your pipeline:
+# config.input_processing, config.preprocessing, config.text_processing
 ```
 
-### 2. List Available Configurations
+### 🛠️ Available Presets
 
-```bash
-python enhanced_main.py --list-configs
+| Stage                | Presets (examples)                |
+|----------------------|-----------------------------------|
+| Input Processing     | high_quality_input, balanced_input, fast_input, technical_input |
+| Preprocessing        | light_preprocessing, standard_preprocessing, aggressive_preprocessing, technical_preprocessing |
+| Text Processing      | video_transcript, presentation_text, technical_brewing, general_brewing, recipe_content, faq_content, historical_content, equipment_specs, fast_chunking |
+
+### 🚀 Practical Scenarios
+- **High Quality Video Pipeline**: `high_quality_input` + `light_preprocessing` + `video_transcript`
+- **Technical Brewing Pipeline**: `technical_input` + `technical_preprocessing` + `technical_brewing`
+- **Fast OCR Pipeline**: `fast_input` + `aggressive_preprocessing` + `fast_chunking`
+- **Balanced General Pipeline**: `balanced_input` + `standard_preprocessing` + `general_brewing`
+
+See `test_three_stage_configs.py` for a demonstration script.
+
+## 🧑‍💻 Advanced Usage Examples
+
+### 1. Dynamic Config Selection Based on File Type
+
+```python
+from chunking_configs import create_custom_combination
+
+def select_config_for_file(file_path):
+    if file_path.endswith('.mp4') or file_path.endswith('.wav'):
+        # Video/audio: high quality input, light preprocessing, video transcript chunking
+        return create_custom_combination('high_quality_input', 'light_preprocessing', 'video_transcript')
+    elif file_path.endswith('.pptx') or file_path.endswith('.jpg'):
+        # Presentations/images: balanced input, standard preprocessing, presentation chunking
+        return create_custom_combination('balanced_input', 'standard_preprocessing', 'presentation_text')
+    elif file_path.endswith('.txt'):
+        # Technical text: skip input, use technical preprocessing and chunking
+        return create_custom_combination('technical_input', 'technical_preprocessing', 'technical_brewing')
+    else:
+        # Fallback: fast processing
+        return create_custom_combination('fast_input', 'aggressive_preprocessing', 'fast_chunking')
+
+# Example usage
+for file in ['lecture.mp4', 'slides.pptx', 'manual.txt']:
+    config = select_config_for_file(file)
+    print(f"Config for {file}:")
+    print("  Input:", config.input_processing)
+    print("  Preprocessing:", config.preprocessing)
+    print("  Text Processing:", config.text_processing)
 ```
 
-### 3. Process Data with Enhanced Pipeline
+---
 
-```bash
-# Extract and transcribe with validation
-python enhanced_main.py --extract-audio
-python enhanced_main.py --transcribe-audio --validate
+### 2. Customizing Only One Stage
 
-# Create embeddings with specific configuration
-python enhanced_main.py --create-embeddings --config technical_brewing
+```python
+from chunking_configs import (
+    get_input_processing_config,
+    get_preprocessing_config,
+    get_text_processing_config,
+    ProcessingConfig
+)
 
-# Create embeddings with smart config selection (recommended)
-python enhanced_processor_with_cleanup.py
-# Automatically uses 'video_transcript' for transcripts, 'presentation_text' for OCR
+# Use a custom text processing config, but default input and preprocessing
+custom_text_config = get_text_processing_config('recipe_content')
+config = ProcessingConfig(
+    input_processing=get_input_processing_config('balanced_input'),
+    preprocessing=get_preprocessing_config('standard_preprocessing'),
+    text_processing=custom_text_config
+)
+```
 
-# Manual config override
-python enhanced_processor_with_cleanup.py --config technical_brewing
+---
 
-# Run only cleanup (no processing)
-python enhanced_processor_with_cleanup.py --cleanup-only
+### 3. Fully Custom Configuration (No Presets)
 
-# Validate existing data
-python enhanced_main.py --validate data/transcripts --report quality_report.txt --plots
+```python
+from chunking_configs import create_custom_config
+
+config = create_custom_config(
+    # Input processing
+    video_quality='high',
+    audio_sample_rate=48000,
+    whisper_model='large',
+    # Preprocessing
+    clean_text=True,
+    remove_stopwords=True,
+    lemmatize=True,
+    min_text_length=200,
+    # Text processing
+    max_chunk_size=1800,
+    overlap_size=400,
+    embedding_model='all-mpnet-base-v2',
+    collection_name='custom_brew_collection'
+)
+```
+
+---
+
+### 4. Integrating with a Real Pipeline
+
+Suppose you have a pipeline function that expects a `ProcessingConfig`:
+
+```python
+def run_pipeline(config, input_files):
+    # 1. Use config.input_processing for extraction/transcription/OCR
+    # 2. Use config.preprocessing for text cleaning
+    # 3. Use config.text_processing for chunking, embedding, and vector DB
+    pass
+
+# Choose a config for a technical brewing batch
+config = create_custom_combination('technical_input', 'technical_preprocessing', 'technical_brewing')
+run_pipeline(config, input_files=['brew_talk.mp4', 'brew_notes.txt'])
+```
+
+---
+
+### 5. Batch Processing with Different Configs
+
+You can process different batches with different configs in the same script:
+
+```python
+batches = [
+    ('video_batch', ['vid1.mp4', 'vid2.mp4'], 'high_quality_input', 'light_preprocessing', 'video_transcript'),
+    ('ocr_batch', ['slide1.jpg', 'slide2.jpg'], 'fast_input', 'aggressive_preprocessing', 'presentation_text'),
+]
+
+for batch_name, files, input_p, prep_p, text_p in batches:
+    config = create_custom_combination(input_p, prep_p, text_p)
+    print(f"Processing {batch_name} with config: {config}")
+    run_pipeline(config, files)
 ```
 
 ## 📋 Configuration Options

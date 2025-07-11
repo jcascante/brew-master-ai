@@ -33,6 +33,33 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 @dataclass
+class InputProcessingConfig:
+    """Configuration for processing raw input formats to text"""
+    # Video/Audio processing
+    video_quality: str = 'medium'  # low, medium, high
+    audio_sample_rate: int = 16000
+    audio_channels: int = 1
+    whisper_model: str = 'base'  # tiny, base, small, medium, large
+    whisper_language: str = 'en'
+    
+    # Image/OCR processing
+    ocr_language: str = 'eng'
+    ocr_config: str = '--psm 6'  # Page segmentation mode
+    image_preprocessing: bool = True
+    image_quality_threshold: int = 70
+    
+    # Presentation processing
+    extract_images: bool = True
+    extract_text: bool = True
+    image_format: str = 'png'
+    image_quality: int = 90
+    
+    # General processing
+    parallel_processing: bool = True
+    max_workers: int = 4
+    timeout_seconds: int = 300
+
+@dataclass
 class PreprocessingConfig:
     """Configuration for text preprocessing and validation"""
     clean_text: bool = True
@@ -48,8 +75,8 @@ class PreprocessingConfig:
     remove_punctuation: bool = False
 
 @dataclass
-class ChunkingConfig:
-    """Configuration for text chunking strategies"""
+class TextProcessingConfig:
+    """Configuration for text chunking and embedding generation"""
     max_chunk_size: int = 1000
     min_chunk_size: int = 100
     overlap_size: int = 200
@@ -58,18 +85,31 @@ class ChunkingConfig:
     max_sentences_per_chunk: int = 10
     respect_sentence_boundaries: bool = True
     smart_boundaries: bool = True
+    
+    # Embedding generation
+    embedding_model: str = 'all-MiniLM-L6-v2'
+    batch_size: int = 32
+    normalize_embeddings: bool = True
+    
+    # Vector store settings
+    collection_name: str = 'brew_master_ai'
+    vector_size: int = 384
+    distance_metric: str = 'cosine'
 
 @dataclass
 class ProcessingConfig:
-    """Configuration for data processing with separate preprocessing and chunking configs"""
+    """Configuration for data processing with separate input, preprocessing, and text processing configs"""
+    input_processing: InputProcessingConfig = None
     preprocessing: PreprocessingConfig = None
-    chunking: ChunkingConfig = None
+    text_processing: TextProcessingConfig = None
     
     def __post_init__(self):
+        if self.input_processing is None:
+            self.input_processing = InputProcessingConfig()
         if self.preprocessing is None:
             self.preprocessing = PreprocessingConfig()
-        if self.chunking is None:
-            self.chunking = ChunkingConfig()
+        if self.text_processing is None:
+            self.text_processing = TextProcessingConfig()
     
     # Backward compatibility properties
     @property
@@ -97,32 +137,32 @@ class ProcessingConfig:
         return self.preprocessing.language
     
     @property
-    def chunk_config(self) -> ChunkingConfig:
-        return self.chunking
+    def chunk_config(self) -> TextProcessingConfig:
+        return self.text_processing
     
     @property
     def max_chunk_size(self) -> int:
-        return self.chunking.max_chunk_size
+        return self.text_processing.max_chunk_size
     
     @property
     def min_chunk_size(self) -> int:
-        return self.chunking.min_chunk_size
+        return self.text_processing.min_chunk_size
     
     @property
     def overlap_size(self) -> int:
-        return self.chunking.overlap_size
+        return self.text_processing.overlap_size
     
     @property
     def chunk_by_sentences(self) -> bool:
-        return self.chunking.chunk_by_sentences
+        return self.text_processing.chunk_by_sentences
     
     @property
     def preserve_paragraphs(self) -> bool:
-        return self.chunking.preserve_paragraphs
+        return self.text_processing.preserve_paragraphs
     
     @property
     def max_sentences_per_chunk(self) -> int:
-        return self.chunking.max_sentences_per_chunk
+        return self.text_processing.max_sentences_per_chunk
 
 class DataValidator:
     """Validates and cleans text data"""
@@ -220,7 +260,7 @@ class DataValidator:
 class TextChunker:
     """Advanced text chunking with multiple strategies"""
     
-    def __init__(self, config: ChunkingConfig):
+    def __init__(self, config: TextProcessingConfig):
         self.config = config
         self._setup_nlp()
     
