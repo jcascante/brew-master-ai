@@ -1,244 +1,531 @@
-# 🔧 Data Extraction Module
+# 🍺 Brew Master AI - Unified Data Processing Pipeline
 
-CLI tools for processing videos and PowerPoint presentations into searchable text for the Brew Master AI RAG system.
+A comprehensive, unified data processing pipeline for Brew Master AI that transforms raw multimedia content (videos, presentations) into searchable vector embeddings for the RAG system.
 
-## 🚀 Enhanced Processing Pipeline
+## 🎯 **Overview**
 
-We now offer an **enhanced data processing pipeline** with advanced features:
+This unified system consolidates all data processing functionality into a clean, maintainable architecture:
 
-- **Advanced chunking strategies** with content-type specific presets
-- **Data validation and quality assessment** with brewing-specific analysis
-- **Enhanced metadata enrichment** with comprehensive content information
-- **Quality visualization tools** for data insights
+- **Single CLI** - `brew_master.py` for all operations
+- **Unified Processing** - `processor.py` with all advanced features
+- **Smart Configuration** - `config.py` with YAML + CLI overrides
+- **Complete Pipeline** - Audio extraction → Transcription → Embeddings
+- **Advanced Features** - Cleanup, deduplication, smart config selection
 
-**📖 See [ENHANCED_README.md](ENHANCED_README.md) for the complete enhanced pipeline documentation.**
+## 🚀 **Quick Start**
 
-## 🔄 Legacy vs Enhanced
-
-| Feature | Legacy Pipeline | Enhanced Pipeline |
-|---------|----------------|-------------------|
-| Chunking | Fixed 500-char chunks | Configurable strategies |
-| Validation | Basic file checks | Comprehensive quality scoring |
-| Metadata | Basic file info | Rich content analysis |
-| Quality | No assessment | Detailed quality reports |
-| Configuration | Hard-coded | Multiple presets |
-| Visualization | None | Quality plots and charts |
-
-## 🎯 Purpose
-
-This module transforms raw multimedia content (videos and presentations) into structured text data that can be embedded and searched by the RAG system. It handles the complete pipeline from raw files to vector database upload.
-
-## ✨ Features
-
-### 🎥 Video Processing
-- **Audio Extraction**: Convert MP4 videos to WAV audio files
-- **Transcription**: Use Whisper AI for high-quality speech-to-text
-- **Multilingual Support**: Auto-detect and transcribe multiple languages
-- **Batch Processing**: Handle multiple videos efficiently
-
-### 📊 Presentation Processing
-- **Image Extraction**: Extract images from PowerPoint slides
-- **OCR Processing**: Convert slide images to text using Tesseract
-- **Structured Output**: Maintain source file relationships
-
-### 🧠 Vector Processing
-- **Text Chunking**: Split long texts into searchable chunks
-- **Embedding Generation**: Create semantic embeddings using sentence-transformers
-- **Database Upload**: Store embeddings in Qdrant vector database
-
-## 🚀 Quick Start
-
-### Prerequisites
+### **Complete Pipeline (Recommended)**
 ```bash
-# Install system dependencies
+# Process everything from raw files to embeddings
+python brew_master.py process --input videos/ --output embeddings/
+```
+
+### **Individual Operations**
+```bash
+# Extract audio from videos
+python brew_master.py extract-audio --input videos/ --output audio/
+
+# Transcribe audio to text
+python brew_master.py transcribe --input audio/ --output transcripts/
+
+# Create embeddings
+python brew_master.py create-embeddings --input transcripts/ --config video_transcript
+```
+
+### **Configuration Management**
+```bash
+# List available configs
+python brew_master.py config --list
+
+# Show current config
+python brew_master.py config --show
+
+# Validate config
+python brew_master.py config --validate
+```
+
+## 📁 **File Structure**
+
+```
+data-extraction/
+├── 📄 brew_master.py              # Main CLI application (unified)
+├── 📄 processor.py                # Core processing engine (unified)
+├── 📄 config.py                   # Configuration system (unified)
+├── 📄 data_validator.py           # Data validation utilities
+├── 📄 config.yaml                 # Default configuration
+├── 📄 requirements.txt            # Dependencies
+├── 📄 README.md                   # This file
+└── 📄 UNIFIED_ARCHITECTURE.md     # Architecture documentation
+```
+
+## 🔧 **Core Components**
+
+### **1. `brew_master.py` - Main CLI Application**
+Single entry point for all data processing operations with comprehensive command-line interface.
+
+**Features:**
+- Complete pipeline execution
+- Individual operation commands
+- Configuration management
+- Data validation
+- Cleanup operations
+- Progress tracking and reporting
+
+**Commands:**
+```bash
+# Complete pipeline
+brew_master.py process --input videos/ --output embeddings/
+
+# Individual stages
+brew_master.py extract-audio --input videos/ --output audio/
+brew_master.py transcribe --input audio/ --output transcripts/
+brew_master.py create-embeddings --input transcripts/ --config video_transcript
+
+# Configuration
+brew_master.py config --list
+brew_master.py config --show
+brew_master.py config --validate
+
+# Validation
+brew_master.py validate --input transcripts/ --report quality_report.html
+
+# Cleanup
+brew_master.py cleanup --remove-orphaned
+```
+
+### **2. `processor.py` - Core Processing Engine**
+Unified processing engine with all advanced features from the legacy systems.
+
+**Classes:**
+- `BrewMasterProcessor` - Main processing engine
+- `DataValidator` - Text validation and cleaning
+- `TextChunker` - Advanced text chunking
+- `MetadataEnricher` - Rich metadata generation
+
+**Features:**
+- Audio extraction from videos
+- Whisper transcription with progress tracking
+- PowerPoint image extraction
+- OCR text extraction
+- Advanced text processing with validation
+- Smart config selection
+- Database cleanup and deduplication
+
+### **3. `config.py` - Unified Configuration System**
+Comprehensive configuration management with YAML files and CLI overrides.
+
+**Features:**
+- YAML configuration files
+- Command-line overrides
+- Configuration presets
+- Smart config selection
+- Validation and management
+
+## 📊 **Configuration Presets**
+
+### **Input Processing Presets**
+- `high_quality_input` - Best quality, slower processing
+- `balanced_input` - Good balance of quality and speed
+- `fast_input` - Fast processing, lower quality
+
+### **Text Processing Presets**
+- `video_transcript` - Long-form video content (1500 chars, 300 overlap)
+- `presentation_text` - Slide-based content (800 chars, 150 overlap)
+- `general_brewing` - General text content (1000 chars, 200 overlap)
+- `technical_brewing` - Technical content (1200 chars, 250 overlap)
+- `recipe_content` - Recipe preservation (2000 chars, 400 overlap)
+- `faq_content` - Q&A content (600 chars, 100 overlap)
+- `historical_content` - Narrative content (1800 chars, 350 overlap)
+- `equipment_specs` - Technical specs (1000 chars, 200 overlap)
+
+### **Quality Presets**
+- `high_quality` - Complete high-quality configuration
+- `balanced` - Complete balanced configuration
+- `fast_processing` - Complete fast configuration
+
+## 🔄 **Processing Pipeline**
+
+### **Complete Pipeline Flow**
+```
+Raw Files → Audio Extraction → Transcription → Text Processing → Vector DB
+     ↓              ↓              ↓              ↓              ↓
+Videos (.mp4) → Audio (.wav) → Transcripts (.txt) → Chunks → Embeddings
+Presentations (.pptx) → Images → OCR Text (.txt) → Chunks → Embeddings
+```
+
+### **Pipeline Stages**
+
+1. **Audio Extraction** - Extract audio from video files using ffmpeg
+2. **Transcription** - Transcribe audio using Whisper AI
+3. **Image Extraction** - Extract images from PowerPoint presentations
+4. **OCR Processing** - Extract text from images using Tesseract
+5. **Text Processing** - Validate, clean, and chunk text
+6. **Embedding Creation** - Generate embeddings and upload to Qdrant
+7. **Cleanup** - Remove orphaned chunks and maintain database
+
+## ⚙️ **Configuration**
+
+### **YAML Configuration (`config.yaml`)**
+```yaml
+# Input/Output directories
+directories:
+  videos: "data/input/videos/"
+  audios: "data/audios/"
+  presentations: "data/presentations/"
+  transcripts: "data/transcripts/from_videos"
+  presentation_texts: "data/presentation_texts/"
+
+# Processing settings
+processing:
+  default_config: "general_brewing"
+  enable_smart_config: true
+  max_workers: 4
+
+# Input processing
+input_processing:
+  whisper_model: "base"  # tiny, base, small, medium, large
+  audio_sample_rate: 16000
+  ocr_language: "eng"
+
+# Text processing
+text_processing:
+  max_chunk_size: 1000
+  min_chunk_size: 150
+  overlap_size: 200
+  embedding_model: "all-MiniLM-L6-v2"
+
+# Validation
+validation:
+  enable_validation: true
+  quality_threshold: 0.5
+
+# Cleanup
+cleanup:
+  enable_cleanup: true
+  remove_orphaned_chunks: true
+  deduplication: true
+```
+
+### **Command-Line Overrides**
+```bash
+# Override any configuration setting
+python brew_master.py process \
+  --videos-dir /custom/videos/ \
+  --chunk-size 1500 \
+  --overlap 300 \
+  --max-workers 8 \
+  --config video_transcript
+```
+
+## 🎯 **Usage Examples**
+
+### **Basic Usage**
+```bash
+# Complete pipeline with default settings
+python brew_master.py process
+
+# Complete pipeline with custom input/output
+python brew_master.py process --input my_videos/ --output my_results/
+
+# Complete pipeline with specific config
+python brew_master.py process --config video_transcript
+```
+
+### **Individual Operations**
+```bash
+# Extract audio only
+python brew_master.py extract-audio --input videos/ --output audio/
+
+# Transcribe existing audio
+python brew_master.py transcribe --input audio/ --output transcripts/
+
+# Process presentations
+python brew_master.py extract-images --input presentations/ --output images/
+python brew_master.py ocr --input images/ --output ocr_text/
+
+# Create embeddings from existing text
+python brew_master.py create-embeddings --input transcripts/ --config video_transcript
+```
+
+### **Advanced Usage**
+```bash
+# Validate data quality
+python brew_master.py validate --input transcripts/ --report quality.html --plots
+
+# Clean up orphaned chunks
+python brew_master.py cleanup --remove-orphaned
+
+# Show configuration
+python brew_master.py config --show
+
+# List available configs
+python brew_master.py config --list
+```
+
+## 🔍 **Data Validation**
+
+The system includes comprehensive data validation:
+
+### **Validation Features**
+- Text quality assessment
+- Content length validation
+- Brewing keyword detection
+- Repetitive content detection
+- Quality scoring and reporting
+
+### **Validation Commands**
+```bash
+# Validate transcripts
+python brew_master.py validate --input transcripts/ --report transcript_quality.html
+
+# Validate with visualizations
+python brew_master.py validate --input transcripts/ --plots
+
+# Validate multiple directories
+python brew_master.py validate --input transcripts/ presentation_texts/ --report full_quality.html
+```
+
+## 🧹 **Database Cleanup**
+
+### **Cleanup Features**
+- Orphaned chunk detection
+- Automatic cleanup of deleted files
+- Config tracking and deduplication
+- Backup before cleanup (optional)
+
+### **Cleanup Commands**
+```bash
+# Clean up orphaned chunks
+python brew_master.py cleanup --remove-orphaned
+
+# Clean up specific directories
+python brew_master.py cleanup --remove-orphaned --directories transcripts/ ocr_text/
+```
+
+## 📈 **Progress Tracking**
+
+### **Real-Time Progress**
+- File-by-file progress reporting
+- Processing time estimation
+- Success/failure indicators
+- Detailed statistics
+
+### **Progress Example**
+```
+🎵 Extracting audio from data/input/videos/ to data/audios/
+[1/5] Extracting audio from video1.mp4...
+✅ Audio saved to data/audios/video1.wav
+[2/5] Skipping video2.mp4 (audio already exists)
+...
+
+🎤 Transcribing audio from data/audios/ to data/transcripts/from_videos
+[1/3] Transcribing video1.wav (15.2 MB)...
+  📊 Stats: 1250 words, 45.3 seconds (0.8 minutes)
+  ⚡ Speed: 27.6 words/second
+✅ Success! Transcript saved to data/transcripts/from_videos/video1.txt
+```
+
+## 🔧 **Advanced Features**
+
+### **Smart Config Selection**
+The system automatically selects the best configuration based on content type:
+- **Transcripts** → `video_transcript` (larger chunks, more overlap)
+- **OCR text** → `presentation_text` (smaller chunks, less overlap)
+- **Manual text** → `general_brewing` (balanced approach)
+
+### **Deduplication**
+- Tracks which files were processed with which config
+- Skips already processed files
+- Reprocesses files when config changes
+- Maintains database consistency
+
+### **Error Handling**
+- Graceful error recovery
+- Continues processing on file failures
+- Detailed error reporting
+- Progress preservation
+
+## 🚀 **Performance Optimization**
+
+### **Parallel Processing**
+- Configurable worker count
+- Parallel audio extraction
+- Batch embedding generation
+- Optimized file I/O
+
+### **Memory Management**
+- Streaming text processing
+- Batch chunking
+- Efficient metadata handling
+- Resource cleanup
+
+### **Speed Optimizations**
+- Skip already processed files
+- Smart config selection
+- Optimized Whisper model selection
+- Efficient database operations
+
+## 📊 **Statistics and Reporting**
+
+### **Processing Statistics**
+- Files processed, skipped, failed
+- Chunks created, validated, rejected
+- Processing time and speed
+- Quality metrics
+
+### **Quality Reports**
+- Content quality scores
+- Brewing keyword analysis
+- Text length distribution
+- Validation results
+
+### **Database Statistics**
+- Chunks uploaded
+- Orphaned chunks removed
+- Config usage tracking
+- Collection metrics
+
+## 🔧 **Installation and Setup**
+
+### **Prerequisites**
+```bash
+# System dependencies
 brew install ffmpeg tesseract  # macOS
 # sudo apt-get install ffmpeg tesseract-ocr  # Ubuntu
 
-# Install Python dependencies
+# Python dependencies
 pip install -r requirements.txt
 ```
 
-### Basic Usage
+### **Environment Setup**
 ```bash
-# 1. Extract audio from videos
-python main.py --extract-audio
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# 2. Transcribe audio to text
-python main.py --transcribe-audio
+# Install dependencies
+pip install -r requirements.txt
 
-# 3. Extract images from PowerPoint
-python main.py --extract-pptx-images
-
-# 4. Perform OCR on images
-python main.py --ocr-images
-
-# 5. Create embeddings and upload to vector database
-python main.py --create-embeddings
+# Verify installation
+python brew_master.py config --show
 ```
 
-## 📁 Data Flow
-
-```
-Input Files:
-├── data/videos/*.mp4           # Raw video files
-└── data/presentations/*.pptx   # PowerPoint presentations
-
-Processing Pipeline:
-├── data/audios/*.wav           # Extracted audio
-├── data/transcripts/*.txt      # Transcribed text
-├── data/presentation_images/   # Extracted slide images
-├── data/presentation_texts/    # OCR results
-└── data/processed/             # Moved after processing
-
-Output:
-└── Qdrant Vector Database      # Semantic embeddings
-```
-
-## 🔧 CLI Commands
-
-### Audio Processing
+### **Vector Database Setup**
 ```bash
-python main.py --extract-audio
+# Start Qdrant (if not already running)
+cd ../vector-db
+docker compose up -d
 ```
-- Reads MP4 files from `data/videos/`
-- Extracts audio as WAV files to `data/audios/`
-- Moves processed videos to `data/processed/`
 
-### Transcription
+## 🧪 **Testing**
+
+### **Test the System**
 ```bash
-python main.py --transcribe-audio
-```
-- Transcribes WAV files using Whisper AI
-- Saves transcripts as TXT files to `data/transcripts/`
-- Moves processed audio to `data/processed_audios/`
+# Test configuration
+python brew_master.py config --validate
 
-### PowerPoint Processing
+# Test with sample data
+python brew_master.py process --input test_videos/ --config fast_processing
+
+# Test individual components
+python brew_master.py extract-audio --input test_videos/ --output test_audio/
+python brew_master.py transcribe --input test_audio/ --output test_transcripts/
+python brew_master.py validate --input test_transcripts/ --plots
+```
+
+## 🔄 **Migration from Legacy Systems**
+
+### **Legacy File Mapping**
+| **Legacy File** | **New Location** | **Status** |
+|-----------------|------------------|------------|
+| `main.py` | `brew_master.py` | ✅ **Replaced** |
+| `enhanced_main.py` | `brew_master.py` | ✅ **Replaced** |
+| `enhanced_processor.py` | `processor.py` | ✅ **Replaced** |
+| `enhanced_processor_with_cleanup.py` | `processor.py` | ✅ **Replaced** |
+| `config_loader.py` | `config.py` | ✅ **Replaced** |
+| `chunking_configs.py` | `config.py` | ✅ **Replaced** |
+| `run_all_pipelines.py` | `brew_master.py process` | ✅ **Replaced** |
+
+### **Command Migration**
 ```bash
-python main.py --extract-pptx-images
-```
-- Extracts images from PPTX files in `data/presentations/`
-- Saves images to `data/presentation_images/`
-- Moves processed presentations to `data/processed_presentations/`
+# Old: python main.py --extract-audio
+# New: python brew_master.py extract-audio
 
-### OCR Processing
+# Old: python enhanced_main.py --transcribe-audio
+# New: python brew_master.py transcribe
+
+# Old: python enhanced_processor.py --create-embeddings
+# New: python brew_master.py create-embeddings
+
+# Old: python run_all_pipelines.py --config video_transcript
+# New: python brew_master.py process --config video_transcript
+```
+
+## 🎉 **Benefits of Unified System**
+
+### **For Users**
+- ✅ **Single entry point** - One command for everything
+- ✅ **Consistent interface** - Same CLI across all operations
+- ✅ **Better documentation** - One comprehensive README
+- ✅ **Easier installation** - Single requirements.txt
+
+### **For Developers**
+- ✅ **No duplication** - Single implementation of each feature
+- ✅ **Easier maintenance** - One place to update each feature
+- ✅ **Better testing** - Unified test suite
+- ✅ **Cleaner codebase** - Organized, modular structure
+
+### **For Production**
+- ✅ **Reliable processing** - All advanced features in one place
+- ✅ **Better error handling** - Unified error management
+- ✅ **Comprehensive logging** - Consistent logging across all operations
+- ✅ **Easy deployment** - Single application to deploy
+
+## 📚 **Additional Documentation**
+
+- **Architecture**: See `UNIFIED_ARCHITECTURE.md` for detailed design
+- **Configuration**: See `config.yaml` for all available settings
+- **Examples**: See command examples above for common use cases
+
+## 🆘 **Troubleshooting**
+
+### **Common Issues**
+
+**Whisper Model Loading**
 ```bash
-python main.py --ocr-images
+# If you get CUDA/GPU errors, use CPU model
+python brew_master.py transcribe --config fast_processing
 ```
-- Performs OCR on images in `data/presentation_images/`
-- Saves text results to `data/presentation_texts/`
-- Moves processed images to `data/processed_images/`
 
-### Vector Database Upload
+**Memory Issues**
 ```bash
-python main.py --create-embeddings
+# Reduce batch size and workers
+python brew_master.py process --max-workers 2 --chunk-size 500
 ```
-- Combines all text files (transcripts + OCR results)
-- Chunks text into 500-character segments
-- Generates embeddings using sentence-transformers
-- Uploads to Qdrant collection `brew_master_ai`
 
-## ⚙️ Configuration
-
-### Text Chunking
-- **Default chunk size**: 500 characters
-- **Overlap**: None (configurable in code)
-- **Chunking strategy**: Simple character-based splitting
-
-### Embedding Model
-- **Model**: `all-MiniLM-L6-v2`
-- **Dimensions**: 384
-- **Distance metric**: Cosine similarity
-
-### Vector Database
-- **Collection name**: `brew_master_ai`
-- **Host**: localhost:6333 (Qdrant)
-- **Metadata**: Source file, chunk index
-
-## 🧪 Testing
-
-### Test Vector Database Queries
+**File Permission Issues**
 ```bash
-python test_query.py
-```
-Tests semantic search with sample queries and displays results.
-
-### Sample Query
-```python
-query = "What is the basic process of brewing beer?"
-# Returns top 3 most relevant chunks with similarity scores
+# Ensure write permissions
+chmod -R 755 data/
 ```
 
-## 🔍 Troubleshooting
-
-### Common Issues
-
-**ffmpeg not found:**
+**Vector Database Connection**
 ```bash
-brew install ffmpeg  # macOS
-sudo apt-get install ffmpeg  # Ubuntu
+# Check if Qdrant is running
+curl http://localhost:6333/collections
 ```
 
-**Tesseract not found:**
+### **Getting Help**
 ```bash
-brew install tesseract  # macOS
-sudo apt-get install tesseract-ocr  # Ubuntu
+# Show all available commands
+python brew_master.py --help
+
+# Show specific command help
+python brew_master.py process --help
+python brew_master.py config --help
 ```
 
-**Whisper model download:**
-- First run may download the Whisper model (~1GB)
-- Ensure stable internet connection
+---
 
-**Qdrant connection:**
-- Ensure Qdrant is running: `docker compose up -d` in `vector-db/`
-- Check connection at `http://localhost:6333`
-
-### Performance Tips
-
-1. **Batch Processing**: Process multiple files at once
-2. **Model Caching**: Whisper and sentence-transformers cache models locally
-3. **Memory Usage**: Large files may require more RAM
-4. **GPU Acceleration**: Install CUDA for faster processing (optional)
-
-## 📊 Output Format
-
-### Transcript Files
-```
-Plain text files with transcribed speech content.
-File naming: {original_video_name}.txt
-```
-
-### OCR Files
-```
-Plain text files with extracted text from slide images.
-File naming: {original_pptx_name}_slide{number}_img{number}.txt
-```
-
-### Vector Database Records
-```json
-{
-  "id": 0,
-  "vector": [0.1, 0.2, ...],
-  "payload": {
-    "text": "chunk content...",
-    "source_file": "transcript1.txt",
-    "chunk_index": 0
-  }
-}
-```
-
-## 🔄 Workflow Integration
-
-This module is designed to be run as part of the complete Brew Master AI pipeline:
-
-1. **Data Preparation**: Place videos and presentations in input directories
-2. **Processing**: Run CLI commands to extract and process content
-3. **Vector Upload**: Create embeddings and upload to Qdrant
-4. **RAG Integration**: Backend uses processed data for chat responses
-
-## 📈 Future Enhancements
-
-- [ ] Support for additional video formats
-- [ ] Advanced text chunking strategies
-- [ ] Parallel processing for large datasets
-- [ ] Cloud storage integration
-- [ ] Real-time processing capabilities
+**🍺 Brew Master AI - Unified Data Processing Pipeline**  
+*Transform your brewing knowledge into intelligent searchable content!*

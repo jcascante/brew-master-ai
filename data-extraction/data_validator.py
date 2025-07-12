@@ -18,7 +18,8 @@ except ImportError:
     PLOTTING_AVAILABLE = False
     print("Warning: matplotlib/seaborn not available. Visualization features will be disabled.")
 
-from enhanced_processor import DataValidator, ProcessingConfig
+from processor import DataValidator
+from config import Config
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -27,9 +28,9 @@ logger = logging.getLogger(__name__)
 class DataQualityAnalyzer:
     """Analyzes the quality of text data and provides insights"""
     
-    def __init__(self, config: ProcessingConfig | None = None):
+    def __init__(self, config: Config | None = None):
         if config is None:
-            config = ProcessingConfig()
+            config = Config()
         self.config = config
         self.validator = DataValidator(config)
         
