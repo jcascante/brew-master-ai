@@ -19,8 +19,30 @@ class InputProcessingConfig:
     video_quality: str = 'medium'  # low, medium, high
     audio_sample_rate: int = 16000
     audio_channels: int = 1
-    whisper_model: str = 'base'  # tiny, base, small, medium, large
-    whisper_language: str = 'en'
+    whisper_model: str = 'medium'  # tiny, base, small, medium, large - medium is good balance for Spanish
+    whisper_language: str = 'es'
+    
+    # Whisper optimization settings for Spanish
+    whisper_task: str = 'transcribe'
+    whisper_temperature: float = 0.0  # Deterministic output
+    whisper_fp16: bool = False  # Use float32 for better accuracy
+    whisper_verbose: bool = False
+    whisper_compression_ratio_threshold: float = 2.4  # Filter out non-speech
+    whisper_logprob_threshold: float = -1.0  # Filter low-confidence segments
+    whisper_no_speech_threshold: float = 0.6  # Filter silence
+    whisper_condition_on_previous_text: bool = True  # Use context from previous segments
+    whisper_initial_prompt: str = "Este es un audio sobre cerveza y técnicas de elaboración de cerveza artesanal. Incluye términos como malta, lúpulo, levadura, fermentación, macerado, hervor, y técnicas de cerveza artesanal."
+    
+    # Additional Whisper parameters for better quality
+    whisper_best_of: int = 5  # Number of candidates to consider
+    whisper_beam_size: int = 5  # Beam search size
+    whisper_patience: float = 1.0  # Beam search patience
+    whisper_length_penalty: float = 1.0  # Length penalty for beam search
+    whisper_suppress_tokens: str = "-1"  # Suppress specific tokens
+    whisper_suppress_blank: bool = True  # Suppress blank tokens
+    whisper_word_timestamps: bool = True  # Get word-level timestamps
+    whisper_prepend_punctuations: str = "\"'"¿([{-"
+    whisper_append_punctuations: str = "\"'.。,，!！?？:：")]}、"
     
     # Image/OCR processing
     ocr_language: str = 'eng'
@@ -69,14 +91,14 @@ class TextProcessingConfig:
     smart_boundaries: bool = True
     
     # Embedding generation
-    embedding_model: str = 'all-MiniLM-L6-v2'
+    embedding_model: str = 'paraphrase-multilingual-MiniLM-L12-v2'
     batch_size: int = 32
     normalize_embeddings: bool = True
     
     # Vector store settings
     collection_name: str = 'brew_master_ai'
     vector_size: int = 384
-    distance_metric: str = 'cosine'
+    distance_metric: str = 'Cosine'
 
 
 @dataclass
@@ -137,6 +159,8 @@ class Config:
     # Vector database settings
     vector_db_host: str = "localhost"
     vector_db_port: int = 6333
+    vector_db_indexing_threshold: int = 1000  # When to start indexing vectors
+    vector_db_memmap_threshold: int = 20000   # When to use memory mapping
     
     # Logging settings
     log_level: str = "INFO"
@@ -225,7 +249,7 @@ CONFIG_PRESETS = {
         video_quality='medium',
         audio_sample_rate=16000,
         audio_channels=1,
-        whisper_model='base',
+        whisper_model='large',
         whisper_language='en',
         ocr_language='eng',
         ocr_config='--psm 6',
@@ -269,12 +293,12 @@ CONFIG_PRESETS = {
         max_sentences_per_chunk=15,
         respect_sentence_boundaries=True,
         smart_boundaries=True,
-        embedding_model='all-MiniLM-L6-v2',
+        embedding_model='paraphrase-multilingual-MiniLM-L12-v2',
         batch_size=32,
         normalize_embeddings=True,
         collection_name='brew_master_ai',
         vector_size=384,
-        distance_metric='cosine'
+        distance_metric='Cosine'
     ),
     
     "presentation_text": TextProcessingConfig(
@@ -286,12 +310,12 @@ CONFIG_PRESETS = {
         max_sentences_per_chunk=8,
         respect_sentence_boundaries=True,
         smart_boundaries=True,
-        embedding_model='all-MiniLM-L6-v2',
+        embedding_model='paraphrase-multilingual-MiniLM-L12-v2',
         batch_size=32,
         normalize_embeddings=True,
         collection_name='brew_master_ai',
         vector_size=384,
-        distance_metric='cosine'
+        distance_metric='Cosine'
     ),
     
     "general_brewing": TextProcessingConfig(
@@ -303,12 +327,12 @@ CONFIG_PRESETS = {
         max_sentences_per_chunk=10,
         respect_sentence_boundaries=True,
         smart_boundaries=True,
-        embedding_model='all-MiniLM-L6-v2',
+        embedding_model='paraphrase-multilingual-MiniLM-L12-v2',
         batch_size=32,
         normalize_embeddings=True,
         collection_name='brew_master_ai',
         vector_size=384,
-        distance_metric='cosine'
+        distance_metric='Cosine'
     ),
     
     "technical_brewing": TextProcessingConfig(
@@ -320,12 +344,12 @@ CONFIG_PRESETS = {
         max_sentences_per_chunk=12,
         respect_sentence_boundaries=True,
         smart_boundaries=True,
-        embedding_model='all-MiniLM-L6-v2',
+        embedding_model='paraphrase-multilingual-MiniLM-L12-v2',
         batch_size=32,
         normalize_embeddings=True,
         collection_name='brew_master_ai',
         vector_size=384,
-        distance_metric='cosine'
+        distance_metric='Cosine'
     ),
     
     "recipe_content": TextProcessingConfig(
@@ -337,12 +361,12 @@ CONFIG_PRESETS = {
         max_sentences_per_chunk=20,
         respect_sentence_boundaries=True,
         smart_boundaries=True,
-        embedding_model='all-MiniLM-L6-v2',
+        embedding_model='paraphrase-multilingual-MiniLM-L12-v2',
         batch_size=32,
         normalize_embeddings=True,
         collection_name='brew_master_ai',
         vector_size=384,
-        distance_metric='cosine'
+        distance_metric='Cosine'
     ),
     
     "faq_content": TextProcessingConfig(
@@ -354,12 +378,12 @@ CONFIG_PRESETS = {
         max_sentences_per_chunk=6,
         respect_sentence_boundaries=True,
         smart_boundaries=True,
-        embedding_model='all-MiniLM-L6-v2',
+        embedding_model='paraphrase-multilingual-MiniLM-L12-v2',
         batch_size=32,
         normalize_embeddings=True,
         collection_name='brew_master_ai',
         vector_size=384,
-        distance_metric='cosine'
+        distance_metric='Cosine'
     ),
     
     "historical_content": TextProcessingConfig(
@@ -371,12 +395,12 @@ CONFIG_PRESETS = {
         max_sentences_per_chunk=18,
         respect_sentence_boundaries=True,
         smart_boundaries=True,
-        embedding_model='all-MiniLM-L6-v2',
+        embedding_model='paraphrase-multilingual-MiniLM-L12-v2',
         batch_size=32,
         normalize_embeddings=True,
         collection_name='brew_master_ai',
         vector_size=384,
-        distance_metric='cosine'
+        distance_metric='Cosine'
     ),
     
     "equipment_specs": TextProcessingConfig(
@@ -388,12 +412,12 @@ CONFIG_PRESETS = {
         max_sentences_per_chunk=10,
         respect_sentence_boundaries=True,
         smart_boundaries=True,
-        embedding_model='all-MiniLM-L6-v2',
+        embedding_model='paraphrase-multilingual-MiniLM-L12-v2',
         batch_size=32,
         normalize_embeddings=True,
         collection_name='brew_master_ai',
         vector_size=384,
-        distance_metric='cosine'
+        distance_metric='Cosine'
     ),
     
     # Quality presets
@@ -425,12 +449,12 @@ CONFIG_PRESETS = {
             max_sentences_per_chunk=15,
             respect_sentence_boundaries=True,
             smart_boundaries=True,
-            embedding_model='all-MiniLM-L6-v2',
+            embedding_model='paraphrase-multilingual-MiniLM-L12-v2',
             batch_size=32,
             normalize_embeddings=True,
-            collection_name='brew_master_ai',
-            vector_size=384,
-            distance_metric='cosine'
+                    collection_name='brew_master_ai',
+        vector_size=384,
+        distance_metric='Cosine'
         ),
         validation=ValidationConfig(enable_validation=True, quality_threshold=0.8),
         cleanup=CleanupConfig(enable_cleanup=True, deduplication=True)
@@ -464,12 +488,12 @@ CONFIG_PRESETS = {
             max_sentences_per_chunk=10,
             respect_sentence_boundaries=True,
             smart_boundaries=True,
-            embedding_model='all-MiniLM-L6-v2',
+            embedding_model='paraphrase-multilingual-MiniLM-L12-v2',
             batch_size=32,
             normalize_embeddings=True,
-            collection_name='brew_master_ai',
-            vector_size=384,
-            distance_metric='cosine'
+                    collection_name='brew_master_ai',
+        vector_size=384,
+        distance_metric='Cosine'
         ),
         validation=ValidationConfig(enable_validation=True, quality_threshold=0.6),
         cleanup=CleanupConfig(enable_cleanup=True, deduplication=True)
@@ -612,6 +636,14 @@ class ConfigManager:
                 self.config.cleanup.enable_cleanup = cleanup.get('enable_cleanup', self.config.cleanup.enable_cleanup)
                 self.config.cleanup.remove_orphaned_chunks = cleanup.get('remove_orphaned_chunks', self.config.cleanup.remove_orphaned_chunks)
                 self.config.cleanup.deduplication = cleanup.get('deduplication', self.config.cleanup.deduplication)
+            
+            # Load vector database settings
+            if 'vector_db' in yaml_config:
+                vdb = yaml_config['vector_db']
+                self.config.vector_db_host = vdb.get('host', self.config.vector_db_host)
+                self.config.vector_db_port = vdb.get('port', self.config.vector_db_port)
+                self.config.vector_db_indexing_threshold = vdb.get('indexing_threshold', self.config.vector_db_indexing_threshold)
+                self.config.vector_db_memmap_threshold = vdb.get('memmap_threshold', self.config.vector_db_memmap_threshold)
             
             # Load content type configs
             if 'content_type_configs' in yaml_config:

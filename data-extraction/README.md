@@ -192,7 +192,7 @@ text_processing:
   max_chunk_size: 1000
   min_chunk_size: 150
   overlap_size: 200
-  embedding_model: "all-MiniLM-L6-v2"
+  embedding_model: "paraphrase-multilingual-MiniLM-L12-v2"
 
 # Validation
 validation:

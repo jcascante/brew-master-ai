@@ -443,7 +443,7 @@ class BrewMasterProcessor:
         )
     
     def transcribe_audio(self, input_dir: str, output_dir: str) -> ProcessingResult:
-        """Transcribe audio files using Whisper"""
+        """Transcribe audio files using Whisper with enhanced quality settings"""
         logger.info(f"Transcribing audio from {input_dir} to {output_dir}")
         
         os.makedirs(output_dir, exist_ok=True)
@@ -514,20 +514,55 @@ class BrewMasterProcessor:
             file_start_time = time.time()
             
             try:
-                logger.info("  Starting transcription...")
-                result = model.transcribe(audio_path)
+                logger.info("  Starting transcription with enhanced settings...")
+                logger.info(f"  Using language: {self.config.input_processing.whisper_language}")
+                
+                # Enhanced Whisper transcription with all quality parameters
+                result = model.transcribe(
+                    audio_path,
+                    language=self.config.input_processing.whisper_language,
+                    task=self.config.input_processing.whisper_task,
+                    verbose=self.config.input_processing.whisper_verbose,
+                    fp16=self.config.input_processing.whisper_fp16,
+                    temperature=self.config.input_processing.whisper_temperature,
+                    compression_ratio_threshold=self.config.input_processing.whisper_compression_ratio_threshold,
+                    logprob_threshold=self.config.input_processing.whisper_logprob_threshold,
+                    no_speech_threshold=self.config.input_processing.whisper_no_speech_threshold,
+                    condition_on_previous_text=self.config.input_processing.whisper_condition_on_previous_text,
+                    initial_prompt=self.config.input_processing.whisper_initial_prompt,
+                    best_of=self.config.input_processing.whisper_best_of,
+                    beam_size=self.config.input_processing.whisper_beam_size,
+                    patience=self.config.input_processing.whisper_patience,
+                    length_penalty=self.config.input_processing.whisper_length_penalty,
+                    suppress_tokens=self.config.input_processing.whisper_suppress_tokens,
+                    suppress_blank=self.config.input_processing.whisper_suppress_blank,
+                    word_timestamps=self.config.input_processing.whisper_word_timestamps,
+                    prepend_punctuations=self.config.input_processing.whisper_prepend_punctuations,
+                    append_punctuations=self.config.input_processing.whisper_append_punctuations
+                )
+                
+                # Enhanced post-processing for Spanish text
+                processed_text = self._post_process_spanish_text_enhanced(result['text'], result.get('segments', []))
                 
                 # Save transcript
                 with open(transcript_path, 'w', encoding='utf-8') as f:
-                    f.write(result['text'])
+                    f.write(processed_text)
                 
-                # Calculate timing
+                # Calculate timing and quality metrics
                 elapsed_time = time.time() - file_start_time
                 words = len(result['text'].split())
+                
+                # Calculate average confidence if available
+                avg_confidence = 0.0
+                if 'segments' in result and result['segments']:
+                    confidences = [seg.get('avg_logprob', 0) for seg in result['segments']]
+                    avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
                 
                 logger.info(f"  ✅ Success! Transcript saved to {transcript_path}")
                 logger.info(f"  📊 Stats: {words} words, {elapsed_time:.1f} seconds ({elapsed_time/60:.1f} minutes)")
                 logger.info(f"  ⚡ Speed: {words/elapsed_time:.1f} words/second")
+                if avg_confidence > 0:
+                    logger.info(f"  🎯 Average confidence: {avg_confidence:.3f}")
                 
                 output_files.append(transcript_path)
                 files_processed += 1
@@ -824,9 +859,13 @@ class BrewMasterProcessor:
                         vectors_config=qmodels.VectorParams(
                             size=embeddings.shape[1], 
                             distance=self.config.text_processing.distance_metric
+                        ),
+                        optimizers_config=qmodels.OptimizersConfigDiff(
+                            indexing_threshold=self.config.vector_db_indexing_threshold,
+                            memmap_threshold=self.config.vector_db_memmap_threshold
                         )
                     )
-                    logger.info(f"Created collection: {collection_name}")
+                    logger.info(f"Created collection: {collection_name} with indexing threshold: 1000")
             except Exception as e:
                 logger.error(f"Error with collection: {e}")
                 return ProcessingResult(
@@ -855,7 +894,7 @@ class BrewMasterProcessor:
                     payload=enhanced_metadata | {"text": text}
                 ))
             
-            self.qdrant_client.upsert(collection_name=collection_name, points=points)
+            self.qdrant_client.upsert(collection_name=collection_name, wait=True, points=points)
             
             logger.info(f"Successfully uploaded {len(points)} embeddings to Qdrant")
             
@@ -1025,6 +1064,66 @@ class BrewMasterProcessor:
     def get_statistics(self) -> Dict[str, Any]:
         """Get processing statistics"""
         return self.stats.copy()
+    
+    def _post_process_spanish_text(self, text: str) -> str:
+        """Post-process Spanish text to improve transcription quality"""
+        if not text:
+            return text
+        
+        # Common Spanish transcription fixes
+        replacements = {
+            # Common abbreviations and contractions
+            r'\bq\b': 'que',
+            r'\bx\b': 'por',
+            r'\bd\b': 'de',
+            r'\bpa\b': 'para',
+            r'\bta\b': 'también',
+            r'\bke\b': 'que',
+            
+            # Brewing terminology fixes
+            r'\blupulo\b': 'lúpulo',
+            r'\bmalta\b': 'malta',
+            r'\blevadura\b': 'levadura',
+            r'\bfermentacion\b': 'fermentación',
+            r'\bmacerado\b': 'macerado',
+            r'\bhervor\b': 'hervor',
+            r'\bcarbonatacion\b': 'carbonatación',
+            r'\bembotellado\b': 'embotellado',
+            r'\bmaduracion\b': 'maduración',
+            
+            # Common Spanish word fixes
+            r'\besta\b': 'está',
+            r'\beste\b': 'este',
+            r'\bpara\b': 'para',
+            r'\bpor\b': 'por',
+            r'\bcon\b': 'con',
+            r'\bdel\b': 'del',
+            r'\bal\b': 'al',
+            
+            # Punctuation fixes
+            r'\s+([.,!?;:])': r'\1',  # Remove spaces before punctuation
+            r'([.,!?;:])\s*([A-Z])': r'\1 \2',  # Add space after punctuation before capital letters
+        }
+        
+        # Apply replacements
+        for pattern, replacement in replacements.items():
+            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+        
+        # Fix capitalization
+        sentences = text.split('. ')
+        fixed_sentences = []
+        for sentence in sentences:
+            if sentence:
+                # Capitalize first letter of sentence
+                sentence = sentence[0].upper() + sentence[1:] if sentence else sentence
+                fixed_sentences.append(sentence)
+        
+        text = '. '.join(fixed_sentences)
+        
+        # Remove extra whitespace
+        text = re.sub(r'\s+', ' ', text).strip()
+        
+        return text
 
 
 # Backward compatibility functions

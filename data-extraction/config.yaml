@@ -44,7 +44,7 @@ input_processing:
   
   # Whisper transcription settings
   whisper_model: "base"  # tiny, base, small, medium, large
-  whisper_language: "en"
+  whisper_language: "es"
   
   # OCR settings
   ocr_language: "eng"
@@ -69,14 +69,14 @@ text_processing:
   max_sentences_per_chunk: 10
   
   # Embedding settings
-  embedding_model: "all-MiniLM-L6-v2"
+  embedding_model: "paraphrase-multilingual-MiniLM-L12-v2"
   batch_size: 32
   normalize_embeddings: true
   
   # Vector database settings
   collection_name: "brew_master_ai"
   vector_size: 384
-  distance_metric: "cosine"
+  distance_metric: "Cosine"
 
 # Preprocessing Settings (for text cleaning)
 preprocessing:
@@ -85,7 +85,7 @@ preprocessing:
   lemmatize: false
   min_text_length: 75
   max_text_length: 200000
-  language: "english"
+  language: "spanish"
   normalize_unicode: true
   remove_special_chars: true
   lowercase: true
@@ -98,7 +98,9 @@ vector_db:
   port: 6333
   collection_name: "brew_master_ai"
   vector_size: 384
-  distance_metric: "cosine"
+  distance_metric: "Cosine"
+  indexing_threshold: 1000  # Index vectors when we have 1000+ points
+  memmap_threshold: 20000   # Use memory mapping for large collections
 
 # Logging Settings
 logging:
