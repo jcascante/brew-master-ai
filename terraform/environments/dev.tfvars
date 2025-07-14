@@ -1,9 +1,6 @@
-# Development Environment Configuration
+# Development Environment Configuration (Simplified - No Custom VPC)
 environment = "dev"
 aws_region  = "us-east-1"
-
-# VPC Configuration
-vpc_cidr = "10.0.0.0/16"
 
 # Instance Configuration
 data_extraction_instance_type = "t3.xlarge"  # 4 vCPU, 16 GB RAM
@@ -43,4 +40,5 @@ tags = {
   Purpose     = "DataExtraction"
   CostCenter  = "AI-Research"
   Project     = "BrewMasterAI"
+  Note        = "Using default VPC for development"
 } 

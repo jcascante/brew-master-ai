@@ -1,12 +1,12 @@
-# Brew Master AI - AWS Infrastructure
+# Brew Master AI - AWS Infrastructure (Simplified)
 
-This directory contains the Terraform configuration for deploying the Brew Master AI data extraction infrastructure on AWS.
+This directory contains the Terraform configuration for deploying the Brew Master AI data extraction infrastructure on AWS using the **default VPC** for simplified development.
 
 ## Architecture Overview
 
 The infrastructure consists of:
 
-- **VPC with Public/Private Subnets**: Secure networking with NAT Gateway for private instances
+- **Default VPC**: Using AWS default VPC for simplicity
 - **EC2 Instance**: Optimized for data extraction with GPU support
 - **S3 Buckets**: For data storage, processed data, and logs
 - **Security Groups**: Restrictive access controls
@@ -21,6 +21,7 @@ The infrastructure consists of:
 3. **AWS S3 Bucket** for Terraform state (create manually first)
 4. **DynamoDB Table** for state locking (create manually first)
 5. **EC2 Key Pair** for SSH access
+6. **Default VPC** in your AWS account (usually exists by default)
 
 ## Quick Start
 
@@ -79,8 +80,8 @@ terraform apply -var-file="environments/dev.tfvars"
 
 The infrastructure supports multiple environments through `.tfvars` files:
 
-- `environments/dev.tfvars` - Development environment
-- `environments/prod.tfvars` - Production environment
+- `environments/dev.tfvars` - Development environment (simplified)
+- `environments/prod.tfvars` - Production environment (simplified)
 
 ### Key Configuration Options
 
@@ -99,21 +100,11 @@ The infrastructure supports multiple environments through `.tfvars` files:
 
 #### Networking
 
-- **VPC**: 10.0.0.0/16
-- **Public Subnets**: For NAT Gateway and load balancers
-- **Private Subnets**: For data extraction instances
+- **Default VPC**: Uses AWS default VPC
+- **Public Subnets**: Instances in public subnets with direct internet access
+- **Security Groups**: Restrictive access controls
 
 ## Modules
-
-### VPC Module (`modules/vpc/`)
-
-Creates the networking infrastructure:
-- VPC with DNS support
-- Public and private subnets across availability zones
-- Internet Gateway
-- NAT Gateway (optional)
-- Route tables
-- VPC Flow Logs
 
 ### Security Groups Module (`modules/security_groups/`)
 
@@ -173,9 +164,9 @@ The EC2 instance automatically sets up:
 
 ### Network Security
 
-- Private subnets for data extraction instances
+- Default VPC with public subnets
 - Security groups with minimal required access
-- VPC Flow Logs for traffic monitoring
+- Direct internet access (no NAT Gateway needed)
 
 ### Data Security
 
@@ -186,7 +177,7 @@ The EC2 instance automatically sets up:
 
 ### Access Control
 
-- SSH access restricted to VPC
+- SSH access via security groups
 - Application ports configurable
 - CloudWatch logs for audit trail
 
@@ -272,4 +263,16 @@ aws dynamodb delete-table --table-name brew-master-ai-terraform-locks
 For issues and questions:
 1. Check CloudWatch logs
 2. Review Terraform documentation
-3. Contact the development team 
+3. Contact the development team
+
+## Migration to Custom VPC
+
+When you're ready to move to production with a custom VPC:
+
+1. Uncomment the VPC module in `main.tf`
+2. Add VPC-related variables back to `variables.tf`
+3. Update environment configurations
+4. Run `terraform plan` to see the changes
+5. Apply the changes with `terraform apply`
+
+This simplified setup is perfect for development and can be easily upgraded to a production-grade VPC when needed. 

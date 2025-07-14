@@ -1,9 +1,6 @@
-# Production Environment Configuration
+# Production Environment Configuration (Simplified - No Custom VPC)
 environment = "prod"
 aws_region  = "us-east-1"
-
-# VPC Configuration
-vpc_cidr = "10.0.0.0/16"
 
 # Instance Configuration
 data_extraction_instance_type = "c5.2xlarge"  # 8 vCPU, 16 GB RAM
@@ -44,4 +41,5 @@ tags = {
   CostCenter  = "AI-Research"
   Project     = "BrewMasterAI"
   Criticality = "High"
+  Note        = "Using default VPC for production"
 } 

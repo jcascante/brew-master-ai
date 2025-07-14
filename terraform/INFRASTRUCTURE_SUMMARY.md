@@ -1,28 +1,36 @@
-# Brew Master AI - Infrastructure Summary
+# Brew Master AI - Infrastructure Summary (Simplified)
 
 ## 🏗️ Architecture Overview
 
-This Terraform infrastructure creates a complete AWS environment for running the Brew Master AI data extraction system with maximum resource utilization and GPU support.
+This Terraform infrastructure creates a simplified AWS environment for running the Brew Master AI data extraction system using the **default VPC** for development efficiency.
 
 ### Core Components
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    AWS Infrastructure                       │
+│                AWS Infrastructure (Simplified)              │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  ┌─────────────────┐    ┌─────────────────┐                │
-│  │   Public Subnet │    │  Private Subnet │                │
-│  │                 │    │                 │                │
-│  │ ┌─────────────┐ │    │ ┌─────────────┐ │                │
-│  │ │Internet GW  │ │    │ │EC2 Instance │ │                │
-│  │ └─────────────┘ │    │ │             │ │                │
-│  │                 │    │ │• GPU Support│ │                │
-│  │ ┌─────────────┐ │    │ │• Qdrant DB │ │                │
-│  │ │NAT Gateway  │ │    │ │• Python App│ │                │
-│  │ └─────────────┘ │    │ │• Monitoring│ │                │
-│  └─────────────────┘    │ └─────────────┘ │                │
-│                         └─────────────────┘                │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │                 Default VPC                             │ │
+│  │                                                         │ │
+│  │  ┌─────────────────┐    ┌─────────────────┐            │ │
+│  │  │  Public Subnet  │    │  Public Subnet  │            │ │
+│  │  │                 │    │                 │            │ │
+│  │  │ ┌─────────────┐ │    │ ┌─────────────┐ │            │ │
+│  │  │ │EC2 Instance │ │    │ │Future       │ │            │ │
+│  │  │ │             │ │    │ │Instances    │ │            │ │
+│  │  │ │• GPU Support│ │    │ │             │ │            │ │
+│  │  │ │• Qdrant DB │ │    │ │             │ │            │ │
+│  │  │ │• Python App│ │    │ │             │ │            │ │
+│  │  │ │• Monitoring│ │    │ │             │ │            │ │
+│  │  │ └─────────────┘ │    │ └─────────────┘ │            │ │
+│  │  └─────────────────┘    └─────────────────┘            │ │
+│  │                                                         │ │
+│  │  ┌─────────────────┐    ┌─────────────────┐            │ │
+│  │  │ Internet Gateway│    │ Security Groups │            │ │
+│  │  └─────────────────┘    └─────────────────┘            │ │
+│  └─────────────────────────────────────────────────────────┘ │
 │                                                             │
 │  ┌─────────────────────────────────────────────────────────┐ │
 │  │                    S3 Storage                           │ │
@@ -59,12 +67,11 @@ This Terraform infrastructure creates a complete AWS environment for running the
 - **Tesseract**: For OCR processing
 - **NLP Libraries**: spaCy, NLTK, sentence-transformers
 
-### 3. **Security & Networking**
-- **VPC**: Private subnets with NAT Gateway
+### 3. **Simplified Networking**
+- **Default VPC**: Uses AWS default VPC
+- **Public Subnets**: Direct internet access
 - **Security Groups**: Restrictive access controls
-- **IAM Roles**: Least privilege access
-- **Encryption**: S3, EBS, and data in transit
-- **VPC Flow Logs**: Network traffic monitoring
+- **No NAT Gateway**: Cost savings for development
 
 ### 4. **Monitoring & Observability**
 - **CloudWatch**: Metrics, logs, and alarms
@@ -94,10 +101,6 @@ terraform/
 │   ├── dev.tfvars                   # Development environment config
 │   └── prod.tfvars                  # Production environment config
 └── modules/
-    ├── vpc/                         # VPC and networking
-    │   ├── main.tf
-    │   ├── variables.tf
-    │   └── outputs.tf
     ├── security_groups/             # Security group definitions
     │   ├── main.tf
     │   ├── variables.tf
@@ -215,10 +218,10 @@ The EC2 instance automatically sets up:
 ## 🔒 Security Features
 
 ### Network Security
-- **Private Subnets**: Instances in private subnets
+- **Default VPC**: AWS-managed networking
 - **Security Groups**: Minimal required access
-- **NAT Gateway**: Outbound internet access
-- **VPC Flow Logs**: Traffic monitoring
+- **Public Subnets**: Direct internet access
+- **No VPC Flow Logs**: Simplified setup
 
 ### Data Security
 - **S3 Encryption**: AES256 server-side encryption
@@ -227,7 +230,7 @@ The EC2 instance automatically sets up:
 - **Key Management**: Secure key pair handling
 
 ### Access Control
-- **SSH Access**: Restricted to VPC
+- **SSH Access**: Via security groups
 - **Application Ports**: Configurable access
 - **CloudWatch Logs**: Audit trail
 - **Backup Encryption**: Encrypted backups
@@ -245,6 +248,12 @@ The EC2 instance automatically sets up:
 - **GP3 Volumes**: Better price/performance
 - **Data Archival**: Glacier for old data
 - **Compression**: Automatic compression
+
+### Network Cost Savings
+- **No NAT Gateway**: ~$45/month savings
+- **No VPC Flow Logs**: ~$5-15/month savings
+- **Default VPC**: No additional costs
+- **Total Savings**: ~$50-60/month
 
 ### Monitoring Costs
 - **CloudWatch Alarms**: Cost alerts
@@ -365,6 +374,41 @@ aws logs filter-log-events \
 5. **Scale as Needed**: Add more instances or resources
 6. **Optimize Costs**: Review and optimize resource usage
 
+## 🔄 Migration to Production VPC
+
+When ready to move to production with a custom VPC:
+
+### 1. **Enable VPC Module**
+```bash
+# Uncomment in main.tf
+module "vpc" {
+  source = "./modules/vpc"
+  # ... configuration
+}
+```
+
+### 2. **Add VPC Variables**
+```bash
+# Add to variables.tf
+variable "vpc_cidr" {
+  description = "CIDR block for VPC"
+  type        = string
+  default     = "10.0.0.0/16"
+}
+```
+
+### 3. **Update Environment Configs**
+```bash
+# Add to dev.tfvars and prod.tfvars
+vpc_cidr = "10.0.0.0/16"
+```
+
+### 4. **Deploy Changes**
+```bash
+terraform plan -var-file="environments/dev.tfvars"
+terraform apply -var-file="environments/dev.tfvars"
+```
+
 ## 📞 Support
 
 For issues and questions:
@@ -375,4 +419,4 @@ For issues and questions:
 
 ---
 
-**Note**: This infrastructure is designed for maximum resource utilization and GPU support. Adjust instance types and configurations based on your specific workload requirements and budget constraints. 
+**Note**: This simplified infrastructure is perfect for development and saves ~$50-60/month compared to a custom VPC setup. It can be easily upgraded to a production-grade VPC when needed. 

@@ -29,7 +29,18 @@ provider "aws" {
   }
 }
 
-# Data sources
+# Data sources for default VPC
+data "aws_vpc" "default" {
+  default = true
+}
+
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}
+
 data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = ["099720109477"] # Canonical
@@ -45,25 +56,12 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-data "aws_availability_zones" "available" {
-  state = "available"
-}
-
-# VPC and networking
-module "vpc" {
-  source = "./modules/vpc"
-  
-  environment        = var.environment
-  vpc_cidr          = var.vpc_cidr
-  availability_zones = data.aws_availability_zones.available.names
-}
-
-# Security groups
+# Security groups (simplified for default VPC)
 module "security_groups" {
   source = "./modules/security_groups"
   
   environment = var.environment
-  vpc_id      = module.vpc.vpc_id
+  vpc_id      = data.aws_vpc.default.id
 }
 
 # Data extraction EC2 instance
@@ -73,7 +71,7 @@ module "data_extraction" {
   environment           = var.environment
   instance_type        = var.data_extraction_instance_type
   ami_id               = data.aws_ami.ubuntu.id
-  subnet_id            = module.vpc.private_subnets[0]
+  subnet_id            = data.aws_subnets.default.ids[0]  # Use first default subnet
   security_group_ids   = [module.security_groups.data_extraction_sg_id]
   key_name             = var.key_name
   volume_size          = var.data_extraction_volume_size
@@ -91,7 +89,7 @@ module "data_extraction" {
   vector_db_host       = var.vector_db_host
   vector_db_port       = var.vector_db_port
   
-  depends_on = [module.vpc, module.security_groups]
+  depends_on = [module.security_groups]
 }
 
 # S3 bucket for data storage
@@ -124,6 +122,11 @@ output "data_storage_bucket" {
 }
 
 output "vpc_id" {
-  description = "VPC ID"
-  value       = module.vpc.vpc_id
+  description = "Default VPC ID"
+  value       = data.aws_vpc.default.id
+}
+
+output "subnet_id" {
+  description = "Default subnet ID used for the instance"
+  value       = data.aws_subnets.default.ids[0]
 } 

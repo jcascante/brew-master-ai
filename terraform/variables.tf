@@ -15,12 +15,6 @@ variable "environment" {
   }
 }
 
-variable "vpc_cidr" {
-  description = "CIDR block for VPC"
-  type        = string
-  default     = "10.0.0.0/16"
-}
-
 variable "key_name" {
   description = "Name of the EC2 key pair to use for SSH access"
   type        = string
