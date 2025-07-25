@@ -1,142 +1,29 @@
-# Brew Master AI - Data Processing Configuration
-# This file contains default settings for the data processing pipeline
-# You can override these settings by modifying this file or passing command-line arguments
+# Brew Master AI Configuration
+# This file configures the data processing pipeline for both local and production environments
 
-# Input/Output Directory Settings
-directories:
-  # Input directories (raw files)
-  videos: "data/input/videos/"
-  audios: "data/audios/"
-  presentations: "data/presentations/"
-  images: "data/presentation_images/"
-  
-  # Output directories (processed text)
-  transcripts: "data/transcripts/from_videos"
-  presentation_texts: "data/presentation_texts/"
-  
-  # Temporary and working directories
-  temp: "data/temp/"
-  logs: "data/logs/"
+# S3 Configuration
+s3_bucket: "brew-master-ai-data"
+s3_input_prefix: "audio/input/"
+s3_output_prefix: "transcripts/"
+s3_processed_prefix: "audio/processed/"
+
+# Whisper Configuration
+whisper_model: "base"  # tiny, base, small, medium, large
+language: "en"
+device: "cpu"  # cpu or cuda
 
 # Processing Configuration
-processing:
-  # Default configuration preset
-  default_config: "general_brewing"
-  
-  # Smart config selection (auto-select based on content type)
-  enable_smart_config: true
-  
-  # Parallel processing
-  parallel_processing: true
-  max_workers: 4
-  
-  # Timeout settings (seconds)
-  extraction_timeout: 300
-  transcription_timeout: 600
-  embedding_timeout: 300
+max_workers: 4
+timeout_seconds: 300
 
-# Input Processing Settings (for raw file processing)
-input_processing:
-  # Video/Audio settings
-  video_quality: "medium"  # low, medium, high
-  audio_sample_rate: 16000
-  audio_channels: 1
-  
-  # Whisper transcription settings
-  whisper_model: "base"  # tiny, base, small, medium, large
-  whisper_language: "es"
-  
-  # OCR settings
-  ocr_language: "eng"
-  ocr_config: "--psm 6"
-  image_preprocessing: true
-  image_quality_threshold: 70
-  
-  # Presentation processing
-  extract_images: true
-  extract_text: true
-  image_format: "png"
-  image_quality: 90
+# Storage Configuration (auto-detected based on environment)
+# Local: ./data
+# Production: /mnt/data
 
-# Text Processing Settings (for chunking and embeddings)
-text_processing:
-  # Chunking settings
-  max_chunk_size: 1000
-  min_chunk_size: 150
-  overlap_size: 200
-  chunk_by_sentences: true
-  preserve_paragraphs: true
-  max_sentences_per_chunk: 10
-  
-  # Embedding settings
-  embedding_model: "paraphrase-multilingual-MiniLM-L12-v2"
-  batch_size: 32
-  normalize_embeddings: true
-  
-  # Vector database settings
-  collection_name: "brew_master_ai"
-  vector_size: 384
-  distance_metric: "Cosine"
+# Logging Configuration
+log_level: "INFO"
+log_file: "brew_master.log"
 
-# Preprocessing Settings (for text cleaning)
-preprocessing:
-  clean_text: true
-  remove_stopwords: false
-  lemmatize: false
-  min_text_length: 75
-  max_text_length: 200000
-  language: "spanish"
-  normalize_unicode: true
-  remove_special_chars: true
-  lowercase: true
-  remove_numbers: false
-  remove_punctuation: false
-
-# Vector Database Settings
-vector_db:
-  host: "localhost"
-  port: 6333
-  collection_name: "brew_master_ai"
-  vector_size: 384
-  distance_metric: "Cosine"
-  indexing_threshold: 1000  # Index vectors when we have 1000+ points
-  memmap_threshold: 20000   # Use memory mapping for large collections
-
-# Logging Settings
-logging:
-  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
-  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-  file: "data/logs/processing.log"
-  max_file_size: "10MB"
-  backup_count: 5
-
-# Validation and Quality Settings
-validation:
-  enable_validation: true
-  generate_reports: true
-  create_plots: false
-  report_directory: "data/reports/"
-  min_text_length: 75
-  max_text_length: 200000
-  quality_threshold: 0.5
-
-# Cleanup Settings
-cleanup:
-  enable_cleanup: true
-  remove_orphaned_chunks: true
-  backup_before_cleanup: false
-  backup_directory: "data/backups/"
-
-# File Type Mappings (for smart config selection)
-file_type_mapping:
-  video_extensions: [".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv", ".webm"]
-  audio_extensions: [".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a"]
-  presentation_extensions: [".pptx", ".ppt", ".odp"]
-  image_extensions: [".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".gif"]
-  text_extensions: [".txt", ".md", ".doc", ".docx", ".pdf"]
-
-# Content Type to Config Mapping
-content_type_configs:
-  transcript: "video_transcript"
-  ocr: "presentation_text"
-  manual: "general_brewing" 
+# Model Cache Configuration
+cache_models: true
+model_cache_dir: "models"  # Relative to data directory 

@@ -50,7 +50,7 @@ A RAG-based chatbot for beer brewing knowledge, with data extraction from videos
 - [x] **Create Embeddings**
   - CLI command: `python main.py --create-embeddings`
   - Combine all transcripts and OCR text
-  - Generate embeddings using sentence-transformers (all-MiniLM-L6-v2)
+  - Generate embeddings using sentence-transformers (paraphrase-multilingual-MiniLM-L12-v2)
   - Upload to Qdrant collection (210 embeddings successfully uploaded)
   - Text chunking (500 characters per chunk)
 - [x] **Test Vector Database**

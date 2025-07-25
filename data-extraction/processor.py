@@ -1124,6 +1124,93 @@ class BrewMasterProcessor:
         text = re.sub(r'\s+', ' ', text).strip()
         
         return text
+    
+    def _post_process_spanish_text_enhanced(self, text: str, segments: list = None) -> str:
+        """Enhanced post-processing for Spanish text with segment-aware improvements"""
+        if not text:
+            return text
+        
+        # First apply basic post-processing
+        text = self._post_process_spanish_text(text)
+        
+        # Enhanced Spanish transcription fixes with brewing terminology
+        enhanced_replacements = {
+            # Advanced brewing terminology
+            r'\blúpulos?\b': 'lúpulo',
+            r'\bmostos?\b': 'mosto',
+            r'\bfermentadores?\b': 'fermentador',
+            r'\bcarbonataciones?\b': 'carbonatación',
+            r'\bembotellados?\b': 'embotellado',
+            r'\bmaduraciones?\b': 'maduración',
+            r'\bclarificaciones?\b': 'clarificación',
+            r'\bfiltrados?\b': 'filtrado',
+            r'\bpasteurizaciones?\b': 'pasteurización',
+            
+            # Common Spanish corrections for Whisper transcription
+            r'\bestá\s+bien\b': 'está bien',
+            r'\bpor\s+favor\b': 'por favor',
+            r'\bmuy\s+bien\b': 'muy bien',
+            r'\bmás\s+o\s+menos\b': 'más o menos',
+            r'\bsobre\s+todo\b': 'sobre todo',
+            r'\bsin\s+embargo\b': 'sin embargo',
+            r'\bpor\s+ejemplo\b': 'por ejemplo',
+            r'\ben\s+general\b': 'en general',
+            
+            # Fix common transcription errors
+            r'\bva\s+a\s+ser\b': 'va a ser',
+            r'\bvamos\s+a\s+ver\b': 'vamos a ver',
+            r'\btenemos\s+que\b': 'tenemos que',
+            r'\bhay\s+que\b': 'hay que',
+            r'\bno\s+sé\b': 'no sé',
+            r'\bclaro\s+que\b': 'claro que',
+            
+            # Fix repeated words (common in Spanish speech)
+            r'\b(\w+)\s+\1\b': r'\1',
+            
+            # Fix spacing around punctuation
+            r'\s*([,.:;!?])\s*': r'\1 ',
+            r'\s+([.!?])\s*$': r'\1',
+        }
+        
+        # Apply enhanced replacements
+        for pattern, replacement in enhanced_replacements.items():
+            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+        
+        # Use segment information for better processing if available
+        if segments:
+            # Process segments individually for better context
+            processed_segments = []
+            for segment in segments:
+                segment_text = segment.get('text', '')
+                if segment_text:
+                    # Apply same processing to each segment
+                    processed_segment = self._post_process_spanish_text(segment_text)
+                    processed_segments.append(processed_segment)
+            
+            # Rejoin processed segments
+            if processed_segments:
+                text = ' '.join(processed_segments)
+        
+        # Final cleanup
+        text = re.sub(r'\s+', ' ', text).strip()
+        text = text.replace(' .', '.').replace(' ,', ',')
+        text = text.replace(' !', '!').replace(' ?', '?')
+        
+        # Ensure proper sentence capitalization
+        sentences = re.split(r'([.!?]+)', text)
+        capitalized_sentences = []
+        for i, sentence in enumerate(sentences):
+            if i % 2 == 0 and sentence.strip():  # Text parts (not punctuation)
+                sentence = sentence.strip()
+                if sentence:
+                    sentence = sentence[0].upper() + sentence[1:] if len(sentence) > 1 else sentence.upper()
+                capitalized_sentences.append(sentence)
+            else:
+                capitalized_sentences.append(sentence)
+        
+        text = ''.join(capitalized_sentences)
+        
+        return text
 
 
 # Backward compatibility functions

@@ -85,6 +85,13 @@ logs/
 *.pem
 secrets/
 
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate*
+terraform/*.pem
+terraform/*.tfvars
+
 # Database files
 *.db
 *.sqlite

@@ -62,7 +62,7 @@ async def startup_event():
     global model, qdrant_client, claude_client
     try:
         logger.info("Loading sentence transformer model...")
-        model = SentenceTransformer('all-MiniLM-L6-v2')
+        model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
         logger.info("Model loaded successfully")
         
         logger.info("Connecting to Qdrant...")

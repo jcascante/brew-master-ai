@@ -41,8 +41,8 @@ class InputProcessingConfig:
     whisper_suppress_tokens: str = "-1"  # Suppress specific tokens
     whisper_suppress_blank: bool = True  # Suppress blank tokens
     whisper_word_timestamps: bool = True  # Get word-level timestamps
-    whisper_prepend_punctuations: str = "\"'"¿([{-"
-    whisper_append_punctuations: str = "\"'.。,，!！?？:：")]}、"
+    whisper_prepend_punctuations: str = "\"'([{-"
+    whisper_append_punctuations: str = "\"'.!?;:]}",
     
     # Image/OCR processing
     ocr_language: str = 'eng'
@@ -124,103 +124,78 @@ class CleanupConfig:
     config_tracking: bool = True
 
 
-@dataclass
 class Config:
-    """Unified configuration with all settings"""
+    def __init__(self, config_path="config.yaml"):
+        self.config_path = config_path
+        self.config = self._load_config()
+        self.environment = self._detect_environment()
+        
+    def _load_config(self):
+        """Load configuration from YAML file"""
+        if os.path.exists(self.config_path):
+            with open(self.config_path, 'r') as file:
+                return yaml.safe_load(file)
+        return {}
     
-    # Directories
-    input_dirs: Dict[str, str] = field(default_factory=lambda: {
-        'videos': 'data/input/videos/',
-        'audios': 'data/audios/',
-        'presentations': 'data/presentations/',
-        'images': 'data/presentation_images/'
-    })
+    def _detect_environment(self):
+        """Detect if running locally or on EC2"""
+        # Check if running on EC2 (simple detection)
+        if os.path.exists('/sys/hypervisor/uuid'):
+            return 'production'
+        return 'local'
     
-    output_dirs: Dict[str, str] = field(default_factory=lambda: {
-        'transcripts': 'data/transcripts/from_videos',
-        'presentation_texts': 'data/presentation_texts/',
-        'temp': 'data/temp/',
-        'logs': 'data/logs/'
-    })
+    @property
+    def storage_config(self):
+        """Get storage configuration based on environment"""
+        if self.environment == 'production':
+            return {
+                'local_data_dir': '/mnt/data',  # EBS mount point
+                'temp_dir': '/mnt/data/temp',
+                'models_dir': '/mnt/data/models',
+                's3_bucket': self.config.get('s3_bucket', 'brew-master-ai-data'),
+                's3_input_prefix': 'audio/input/',
+                's3_output_prefix': 'transcripts/',
+                's3_processed_prefix': 'audio/processed/'
+            }
+        else:
+            return {
+                'local_data_dir': './data',
+                'temp_dir': './data/temp',
+                'models_dir': './data/models',
+                's3_bucket': self.config.get('s3_bucket', 'brew-master-ai-data'),
+                's3_input_prefix': 'audio/input/',
+                's3_output_prefix': 'transcripts/',
+                's3_processed_prefix': 'audio/processed/'
+            }
     
-    # Processing configurations
-    input_processing: InputProcessingConfig = field(default_factory=InputProcessingConfig)
-    preprocessing: PreprocessingConfig = field(default_factory=PreprocessingConfig)
-    text_processing: TextProcessingConfig = field(default_factory=TextProcessingConfig)
-    validation: ValidationConfig = field(default_factory=ValidationConfig)
-    cleanup: CleanupConfig = field(default_factory=CleanupConfig)
-    
-    # Advanced features
-    smart_config: bool = True
-    deduplication: bool = True
-    progress_tracking: bool = True
-    default_config: str = "general_brewing"
-    
-    # Vector database settings
-    vector_db_host: str = "localhost"
-    vector_db_port: int = 6333
-    vector_db_indexing_threshold: int = 1000  # When to start indexing vectors
-    vector_db_memmap_threshold: int = 20000   # When to use memory mapping
-    
-    # Logging settings
-    log_level: str = "INFO"
-    log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    log_file: str = "data/logs/processing.log"
-    
-    # File type mappings
-    file_extensions: Dict[str, List[str]] = field(default_factory=lambda: {
-        'video': [".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv", ".webm"],
-        'audio': [".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a"],
-        'presentation': [".pptx", ".ppt", ".odp"],
-        'image': [".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".gif"],
-        'text': [".txt", ".md", ".doc", ".docx", ".pdf"]
-    })
-    
-    # Content type to config mapping
-    content_type_configs: Dict[str, str] = field(default_factory=lambda: {
-        "transcript": "video_transcript",
-        "ocr": "presentation_text", 
-        "manual": "general_brewing"
-    })
+    @property
+    def whisper_config(self):
+        """Get Whisper model configuration"""
+        return {
+            'model_size': self.config.get('whisper_model', 'base'),
+            'language': self.config.get('language', 'en'),
+            'device': self.config.get('device', 'cpu')
+        }
     
     def ensure_directories(self):
-        """Create all necessary directories if they don't exist"""
-        all_dirs = list(self.input_dirs.values()) + list(self.output_dirs.values())
-        for directory in all_dirs:
-            Path(directory).mkdir(parents=True, exist_ok=True)
+        """Create necessary directories"""
+        storage = self.storage_config
+        for dir_path in [storage['local_data_dir'], storage['temp_dir'], storage['models_dir']]:
+            Path(dir_path).mkdir(parents=True, exist_ok=True)
     
-    # Backward compatibility properties
-    @property
-    def videos_dir(self) -> str:
-        return self.input_dirs['videos']
-    
-    @property
-    def audios_dir(self) -> str:
-        return self.input_dirs['audios']
-    
-    @property
-    def presentations_dir(self) -> str:
-        return self.input_dirs['presentations']
-    
-    @property
-    def images_dir(self) -> str:
-        return self.input_dirs['images']
-    
-    @property
-    def transcripts_dir(self) -> str:
-        return self.output_dirs['transcripts']
-    
-    @property
-    def presentation_texts_dir(self) -> str:
-        return self.output_dirs['presentation_texts']
-    
-    @property
-    def temp_dir(self) -> str:
-        return self.output_dirs['temp']
-    
-    @property
-    def logs_dir(self) -> str:
-        return self.output_dirs['logs']
+    def get_file_paths(self, filename):
+        """Get local and S3 paths for a file"""
+        storage = self.storage_config
+        return {
+            'local_input': os.path.join(storage['temp_dir'], filename),
+            'local_output': os.path.join(storage['temp_dir'], f"{filename}.txt"),
+            's3_input': f"{storage['s3_input_prefix']}{filename}",
+            's3_output': f"{storage['s3_output_prefix']}{filename}.txt",
+            's3_processed': f"{storage['s3_processed_prefix']}{filename}"
+        }
+
+# Global config instance
+config = Config()
 
 
 # Configuration presets
