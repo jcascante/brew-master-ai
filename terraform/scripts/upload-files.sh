@@ -32,7 +32,7 @@ validate_files() {
         fi
         
         local extension="${file##*.}"
-        extension="${extension,,}" # Convert to lowercase
+        extension=$(echo "$extension" | tr '[:upper:]' '[:lower:]')
         
         local is_valid=false
         for valid_ext in "${valid_extensions[@]}"; do
@@ -120,7 +120,7 @@ upload_files() {
         local filename=$(basename "$file")
         echo "   Uploading: $filename"
         
-        if aws s3 cp "$file" "s3://$bucket_name/input/" --progress; then
+        if aws s3 cp "$file" "s3://$bucket_name/input/"; then
             echo "   ✅ Success: $filename"
             ((uploaded_count++))
         else

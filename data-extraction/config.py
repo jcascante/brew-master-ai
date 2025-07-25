@@ -770,6 +770,11 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument('--min-chunk', type=int, help='Minimum chunk size')
     parser.add_argument('--max-sentences', type=int, help='Maximum sentences per chunk')
     
+    # Logging configuration
+    parser.add_argument('--log-level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'], 
+                       default='INFO', help='Set logging level (default: INFO)')
+    parser.add_argument('--log-file', help='Custom log file path (default: auto-generated)')
+    
     return parser
 
 

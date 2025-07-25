@@ -140,19 +140,38 @@ open http://localhost:5173
 CLI tools for processing videos and presentations into searchable text.
 
 **Features:**
-- Video audio extraction and transcription
-- PowerPoint image extraction and OCR
-- Vector embedding generation
+- Video audio extraction and transcription with FFmpeg
+- PowerPoint image extraction and OCR with Tesseract
+- Vector embedding generation with multilingual models
 - Batch processing with progress tracking
+- **Comprehensive Logging**: File and console output with timestamps
+- **Progress Monitoring**: Real-time processing status and performance metrics
+- **Error Handling**: Detailed error tracking and debugging information
 
 **Commands:**
 ```bash
-python main.py --extract-audio              # Extract audio from videos
-python main.py --transcribe-audio           # Transcribe audio to text
-python main.py --extract-pptx-images        # Extract images from PowerPoint
-python main.py --ocr-images                 # OCR on presentation images
-python main.py --create-embeddings          # Create embeddings and upload to Qdrant
+# Complete processing pipeline
+python brew_master.py process --input videos/ --output transcripts/
+
+# Individual operations
+python brew_master.py extract-audio --input videos/ --output audio/
+python brew_master.py transcribe --input audio/ --output transcripts/
+python brew_master.py create-embeddings --input transcripts/
+
+# Logging options
+python brew_master.py process --input videos/ --log-level DEBUG
+python brew_master.py process --input videos/ --log-file custom.log
+
+# Configuration management
+python brew_master.py config --list
+python brew_master.py config --show
 ```
+
+**Logging & Monitoring:**
+- **Default Log Location**: `./data/logs/brew_master_processing.log`
+- **Production Log Location**: `/mnt/data/logs/brew_master_processing.log`
+- **Log Levels**: DEBUG, INFO, WARNING, ERROR
+- **Features**: Session tracking, timing info, progress monitoring, error details
 
 ### 🖥️ Backend (`backend/`)
 FastAPI server providing RAG functionality with Claude API integration.

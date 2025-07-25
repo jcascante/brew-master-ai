@@ -8,8 +8,10 @@ import argparse
 import os
 import sys
 import time
+import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
+from datetime import datetime
 
 # Import our unified modules
 from config import Config, ConfigManager, create_argument_parser, list_available_configs
@@ -24,17 +26,59 @@ class BrewMasterCLI:
         self.config_manager = ConfigManager()
         self.config = None
         self.processor = None
+        self.logger = None
+    
+    def setup_logging(self, log_file: str = None, log_level: str = "INFO"):
+        """Setup comprehensive logging to both file and console"""
+        # Determine log file path
+        if log_file is None:
+            # Use config-based path if available, otherwise default
+            if self.config and hasattr(self.config, 'storage_config'):
+                log_dir = Path(self.config.storage_config.get('local_data_dir', './data')) / 'logs'
+            else:
+                log_dir = Path('./data/logs')
+            log_dir.mkdir(parents=True, exist_ok=True)
+            log_file = log_dir / 'brew_master_processing.log'
+        
+        # Configure logging with both file and console handlers
+        logging.basicConfig(
+            level=getattr(logging, log_level.upper()),
+            format='%(asctime)s - %(levelname)s - [%(name)s:%(lineno)d] - %(message)s',
+            handlers=[
+                logging.FileHandler(log_file, mode='a', encoding='utf-8'),
+                logging.StreamHandler(sys.stdout)
+            ]
+        )
+        
+        self.logger = logging.getLogger('BrewMasterAI')
+        
+        # Log session start
+        self.logger.info('=' * 80)
+        self.logger.info(f'🍺 BREW MASTER AI PROCESSING SESSION STARTED - {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
+        self.logger.info('=' * 80)
+        
+        return self.logger
     
     def setup(self, cli_args: Dict[str, Any]):
         """Setup configuration and processor"""
         # Load configuration
         self.config = self.config_manager.load_config(cli_args)
         
+        # Setup logging (after config is loaded)
+        log_level = cli_args.get('log_level', 'INFO')
+        log_file = cli_args.get('log_file', None)
+        self.setup_logging(log_file=log_file, log_level=log_level)
+        
+        self.logger.info('🔧 Setting up Brew Master AI processing environment')
+        self.logger.info(f'   Configuration loaded: {type(self.config).__name__}')
+        
         # Create processor
         self.processor = BrewMasterProcessor(self.config)
+        self.logger.info('   Processor initialized successfully')
         
         # Ensure directories exist
         self.config.ensure_directories()
+        self.logger.info('   Directory structure verified')
     
     def extract_audio(self, input_dir: Optional[str] = None, output_dir: Optional[str] = None) -> ProcessingResult:
         """Extract audio from video files"""
@@ -46,8 +90,23 @@ class BrewMasterCLI:
         input_dir = input_dir or self.config.input_dirs['videos']
         output_dir = output_dir or self.config.input_dirs['audios']
         
-        print(f"🎵 Extracting audio from {input_dir} to {output_dir}")
-        return self.processor.extract_audio(input_dir, output_dir)
+        self.logger.info(f'🎵 STARTING AUDIO EXTRACTION')
+        self.logger.info(f'   Input directory: {input_dir}')
+        self.logger.info(f'   Output directory: {output_dir}')
+        
+        start_time = time.time()
+        result = self.processor.extract_audio(input_dir, output_dir)
+        processing_time = time.time() - start_time
+        
+        if result.success:
+            self.logger.info(f'✅ Audio extraction completed successfully in {processing_time:.1f}s')
+            self.logger.info(f'   Files processed: {result.files_processed}')
+            if result.errors:
+                self.logger.warning(f'   Errors encountered: {len(result.errors)}')
+        else:
+            self.logger.error(f'❌ Audio extraction failed after {processing_time:.1f}s')
+            
+        return result
     
     def transcribe_audio(self, input_dir: Optional[str] = None, output_dir: Optional[str] = None) -> ProcessingResult:
         """Transcribe audio files to text"""
@@ -59,8 +118,23 @@ class BrewMasterCLI:
         input_dir = input_dir or self.config.input_dirs['audios']
         output_dir = output_dir or self.config.output_dirs['transcripts']
         
-        print(f"🎤 Transcribing audio from {input_dir} to {output_dir}")
-        return self.processor.transcribe_audio(input_dir, output_dir)
+        self.logger.info(f'🎤 STARTING AUDIO TRANSCRIPTION')
+        self.logger.info(f'   Input directory: {input_dir}')
+        self.logger.info(f'   Output directory: {output_dir}')
+        
+        start_time = time.time()
+        result = self.processor.transcribe_audio(input_dir, output_dir)
+        processing_time = time.time() - start_time
+        
+        if result.success:
+            self.logger.info(f'✅ Audio transcription completed successfully in {processing_time:.1f}s')
+            self.logger.info(f'   Files processed: {result.files_processed}')
+            if result.errors:
+                self.logger.warning(f'   Errors encountered: {len(result.errors)}')
+        else:
+            self.logger.error(f'❌ Audio transcription failed after {processing_time:.1f}s')
+            
+        return result
     
     def extract_images(self, input_dir: Optional[str] = None, output_dir: Optional[str] = None) -> ProcessingResult:
         """Extract images from PowerPoint presentations"""
@@ -131,28 +205,28 @@ class BrewMasterCLI:
     
     def process_pipeline(self, input_dir: str = None, output_dir: str = None, config_name: str = None) -> Dict[str, Any]:
         """Run complete processing pipeline"""
-        print("🚀 Starting complete Brew Master AI processing pipeline")
-        print("=" * 60)
+        self.logger.info('🚀 STARTING COMPLETE BREW MASTER AI PROCESSING PIPELINE')
+        self.logger.info('=' * 80)
         
         start_time = time.time()
         results = {}
         
         # Step 1: Extract audio from videos
-        print("\n📹 Step 1: Extracting audio from videos...")
+        self.logger.info('📹 STEP 1: Extracting audio from videos')
         audio_result = self.extract_audio(input_dir, self.config.input_dirs['audios'])
         results['audio_extraction'] = audio_result
         
         if not audio_result.success:
-            print("❌ Audio extraction failed, stopping pipeline")
+            self.logger.error('❌ Audio extraction failed, stopping pipeline')
             return results
         
         # Step 2: Transcribe audio to text
-        print("\n🎤 Step 2: Transcribing audio to text...")
+        self.logger.info('🎤 STEP 2: Transcribing audio to text')
         transcript_result = self.transcribe_audio(self.config.input_dirs['audios'], self.config.output_dirs['transcripts'])
         results['transcription'] = transcript_result
         
         if not transcript_result.success:
-            print("❌ Transcription failed, stopping pipeline")
+            self.logger.error('❌ Transcription failed, stopping pipeline')
             return results
         
         # Step 3: Extract images from presentations (if any)
@@ -253,6 +327,9 @@ Examples:
     process_parser.add_argument('--input', help='Input directory containing videos/presentations')
     process_parser.add_argument('--output', help='Output directory for results')
     process_parser.add_argument('--config', help='Configuration preset to use')
+    process_parser.add_argument('--log-level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'], 
+                               default='INFO', help='Set logging level (default: INFO)')
+    process_parser.add_argument('--log-file', help='Custom log file path (default: auto-generated)')
     
     # Extract audio command
     audio_parser = subparsers.add_parser('extract-audio', help='Extract audio from video files')
