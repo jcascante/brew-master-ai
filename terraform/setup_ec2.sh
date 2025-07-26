@@ -66,7 +66,20 @@ if ! mountpoint -q /mnt/temp-data; then
 fi
 
 # Create directories
-mkdir -p /mnt/temp-data/{input,output,temp,logs,models}
+mkdir -p /mnt/temp-data/{input,output,temp,logs,models,qdrant_data}
+
+# Setup Qdrant vector database
+echo "🔍 Setting up Qdrant vector database..."
+sudo docker run -d \
+  --name qdrant \
+  --restart always \
+  -p 6333:6333 \
+  -v /mnt/temp-data/qdrant_data:/qdrant/storage \
+  qdrant/qdrant:latest
+
+# Wait for Qdrant to start
+sleep 10
+echo "✅ Qdrant started and available at localhost:6333"
 
 # Setup Python environment
 cd /home/ec2-user/brew-master-ai
@@ -124,6 +137,13 @@ text_processing:
   overlap_size: 300
   embedding_model: "paraphrase-multilingual-MiniLM-L12-v2"
   collection_name: "brew_master_ai"
+
+# Vector Database Configuration (Qdrant)
+vector_db:
+  host: "localhost"
+  port: 6333
+  collection_name: "brew_master_ai"
+  vector_size: 384  # MiniLM model output size
 
 validation:
   enable_validation: true
@@ -201,6 +221,9 @@ cat > /home/ec2-user/check_status.sh << 'EOFSTATUS'
 echo "🍺 Brew Master AI Status"
 echo "S3 Access: $(aws s3 ls s3://BUCKET_PLACEHOLDER/ > /dev/null 2>&1 && echo '✅ OK' || echo '❌ Failed')"
 echo "Disk: $(df -h /mnt/temp-data | tail -1 | awk '{print $4 " available"}')"
+echo "Qdrant: $(curl -s http://localhost:6333/collections > /dev/null 2>&1 && echo '✅ Running' || echo '❌ Not running')"
+echo "Docker containers:"
+docker ps --format "table {{.Names}}\t{{.Status}}" 2>/dev/null || echo "Docker not available"
 echo "Recent logs:"
 tail -5 /mnt/temp-data/logs/brew_master.log 2>/dev/null || echo "No logs yet"
 EOFSTATUS

@@ -110,11 +110,11 @@ check_ec2_status() {
     local public_ip=$(terraform output -raw public_ip 2>/dev/null)
     
     # Test SSH connectivity
-    if timeout 5 bash -c "echo > /dev/tcp/$public_ip/22" 2>/dev/null; then
+    if timeout 5 bash -c "echo > ssh -o ConnectTimeout=5$public_ip/22" 2>/dev/null; then
         echo "   ✅ SSH connectivity: Available"
         
         # Check if setup is complete
-        if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $ssh_params "test -f /home/ubuntu/setup_complete.flag" 2>/dev/null; then
+        if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $ssh_params "test -f /home/ec2-user/setup_complete.flag" 2>/dev/null; then
             echo "   ✅ Instance setup: Complete"
             
             # Check system status

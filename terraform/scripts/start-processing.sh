@@ -74,6 +74,9 @@ get_connection_info() {
     local instance_id=$(terraform output -raw instance_id 2>/dev/null)
     local public_ip=$(terraform output -raw public_ip 2>/dev/null)
     local ssh_command=$(terraform output -raw ssh_command 2>/dev/null)
+    local key_file=$(terraform output -raw key_file 2>/dev/null)
+
+    echo $ssh_command
     
     echo
     echo "🔗 Connection Information:"
@@ -103,7 +106,9 @@ wait_for_instance() {
     local attempt=1
     
     while [ $attempt -le $max_attempts ]; do
-        if timeout 5 bash -c "echo > /dev/tcp/$public_ip/22" 2>/dev/null; then
+        pwd
+        echo "ssh -o ConnectTimeout=5 -i $TERRAFORM_DIR/brew-master-ai-key.pem ec2-user@$public_ip"
+        if ssh -o ConnectTimeout=5 -i "$TERRAFORM_DIR/brew-master-ai-key.pem" -o StrictHostKeyChecking=no ec2-user@$public_ip "echo 'test'" 2>/dev/null; then
             echo "✅ Instance is ready for SSH"
             break
         fi
@@ -135,7 +140,7 @@ check_processing_status() {
     echo "   Connecting to instance to check status..."
     
     # Check if setup is complete
-    if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $ssh_params "test -f /home/ubuntu/setup_complete.flag" 2>/dev/null; then
+    if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $ssh_params "test -f /home/ec2-user/setup_complete.flag" 2>/dev/null; then
         echo "✅ Instance setup is complete"
         
         # Run status check
