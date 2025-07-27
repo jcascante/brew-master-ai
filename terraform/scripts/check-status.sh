@@ -114,7 +114,7 @@ check_ec2_status() {
         echo "   ✅ SSH connectivity: Available"
         
         # Check if setup is complete
-        if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $ssh_params "test -f /home/ec2-user/setup_complete.flag" 2>/dev/null; then
+        if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $ssh_params "test -f /home/ubuntu/setup_complete.flag" 2>/dev/null; then
             echo "   ✅ Instance setup: Complete"
             
             # Check system status

@@ -107,8 +107,8 @@ wait_for_instance() {
     
     while [ $attempt -le $max_attempts ]; do
         pwd
-        echo "ssh -o ConnectTimeout=5 -i $TERRAFORM_DIR/brew-master-ai-key.pem ec2-user@$public_ip"
-        if ssh -o ConnectTimeout=5 -i "$TERRAFORM_DIR/brew-master-ai-key.pem" -o StrictHostKeyChecking=no ec2-user@$public_ip "echo 'test'" 2>/dev/null; then
+        echo "ssh -o ConnectTimeout=5 -i $TERRAFORM_DIR/brew-master-ai-key.pem ubuntu@$public_ip"
+        if ssh -o ConnectTimeout=5 -i "$TERRAFORM_DIR/brew-master-ai-key.pem" -o StrictHostKeyChecking=no ubuntu@$public_ip "echo 'test'" 2>/dev/null; then
             echo "✅ Instance is ready for SSH"
             break
         fi
@@ -140,7 +140,7 @@ check_processing_status() {
     echo "   Connecting to instance to check status..."
     
     # Check if setup is complete
-    if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $ssh_params "test -f /home/ec2-user/setup_complete.flag" 2>/dev/null; then
+    if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $ssh_params "test -f /home/ubuntu/setup_complete.flag" 2>/dev/null; then
         echo "✅ Instance setup is complete"
         
         # Run status check

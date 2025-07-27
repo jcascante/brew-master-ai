@@ -10,7 +10,7 @@ output "public_ip" {
 
 output "ssh_command" {
   description = "SSH command to connect to the instance"
-  value       = "ssh -i ${var.key_pair_name}.pem ec2-user@${aws_spot_instance_request.basic.public_ip}"
+  value       = "ssh -i ${var.key_pair_name}.pem ubuntu@${aws_spot_instance_request.basic.public_ip}"
 }
 
  

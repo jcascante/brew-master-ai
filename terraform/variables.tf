@@ -53,7 +53,7 @@ variable "key_name" {
 variable "volume_size" {
   description = "Size of the EBS data volume in GB (for temporary processing only)"
   type        = number
-  default     = 20  # Minimal size for temp processing - data stored in S3
+  default     = 30  # Minimal size for temp processing - data stored in S3
 }
 
 variable "volume_type" {
@@ -69,7 +69,7 @@ variable "volume_type" {
 variable "root_volume_size" {
   description = "Size of the root volume in GB"
   type        = number
-  default     = 20
+  default     = 40
 }
 
 variable "root_volume_type" {
@@ -85,7 +85,8 @@ variable "root_volume_type" {
 variable "ami_id" {
   description = "AMI ID for the EC2 instance"
   type        = string
-  default     = "ami-0150ccaf51ab55a51"  # Amazon Linux 2023 AMI 2023.8.20250707.0 x86_64 HVM kernel-6.1
+  default     = "ami-0a7d80731ae1b2435" # Ubuntu Server 22.04 LTS (HVM), SSD Volume Type
+  # default     = "ami-0150ccaf51ab55a51"  # Amazon Linux 2023 AMI 2023.8.20250707.0 x86_64 HVM kernel-6.1
 }
 
 variable "s3_bucket" {

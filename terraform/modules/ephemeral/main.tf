@@ -40,6 +40,15 @@ resource "aws_security_group" "whisper_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Qdrant vector database access
+  ingress {
+    description = "Qdrant access"
+    from_port   = 6333
+    to_port     = 6333
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   # All outbound traffic
   egress {
     from_port   = 0

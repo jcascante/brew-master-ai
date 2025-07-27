@@ -11,14 +11,15 @@ echo "🚀 Bootstrapping EC2 instance for Brew Master AI..."
 echo "📦 S3 Bucket: $S3_BUCKET_NAME"
 
 # Update system
-sudo apt update && sudo apt install -y git curl
+sudo apt update -y && sudo apt install -y git
 
 # Clone repository to get full setup script
-cd /home/ec2-user
+cd /home/ubuntu
 git clone $GITHUB_REPO || (cd brew-master-ai && git pull)
+sudo chown -R ubuntu:ubuntu /home/ubuntu/brew-master-ai
 
 # Create full setup script with S3 bucket name
-cat > /home/ec2-user/brew-master-ai/full_setup.sh << 'FULLSETUP'
+cat > /home/ubuntu/brew-master-ai/full_setup.sh << 'FULLSETUP'
 #!/bin/bash
 # Full EC2 setup script for Brew Master AI
 
@@ -29,17 +30,17 @@ echo "🚀 Running full setup for Brew Master AI..."
 echo "📦 S3 Bucket: $S3_BUCKET_NAME"
 
 # Install essential packages
-sudo apt update
-sudo apt install -y python3 python3-pip python3-venv git curl wget unzip ffmpeg tesseract-ocr build-essential awscli docker.io
+sudo apt update -y
+sudo apt install -y python3 python3-pip python3-dev wget unzip ffmpeg tesseract-ocr docker.io python3.10-venv
 
 # Setup Docker
 sudo systemctl start docker
 sudo systemctl enable docker
-sudo usermod -aG docker ec2-user
+sudo usermod -aG docker ubuntu
 
 # Setup storage
 sudo mkdir -p /mnt/temp-data
-sudo chown ec2-user:ec2-user /mnt/temp-data
+sudo chown ubuntu:ubuntu /mnt/temp-data
 
 # Mount EBS volume
 if ! mountpoint -q /mnt/temp-data; then
@@ -56,12 +57,12 @@ if ! mountpoint -q /mnt/temp-data; then
             sudo mkfs.ext4 $DEVICE
         fi
         sudo mount $DEVICE /mnt/temp-data
-        sudo chown ec2-user:ec2-user /mnt/temp-data
+        sudo chown ubuntu:ubuntu /mnt/temp-data
         echo "$DEVICE /mnt/temp-data ext4 defaults,nofail 0 2" | sudo tee -a /etc/fstab
         echo "✅ EBS volume mounted"
     else
-        mkdir -p /home/ec2-user/temp-data
-        ln -sf /home/ec2-user/temp-data /mnt/temp-data
+        mkdir -p /home/ubuntu/temp-data
+        ln -sf /home/ubuntu/temp-data /mnt/temp-data
     fi
 fi
 
@@ -70,19 +71,47 @@ mkdir -p /mnt/temp-data/{input,output,temp,logs,models,qdrant_data}
 
 # Setup Qdrant vector database
 echo "🔍 Setting up Qdrant vector database..."
-sudo docker run -d \
+
+# Pull Qdrant image first
+echo "📥 Pulling Qdrant Docker image..."
+sudo docker pull qdrant/qdrant:latest
+
+# Create systemd service for Qdrant
+sudo tee /etc/systemd/system/qdrant.service > /dev/null << 'EOFSYSTEMD'
+[Unit]
+Description=Qdrant Vector Database
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=-/usr/bin/docker stop qdrant
+ExecStartPre=-/usr/bin/docker rm qdrant
+ExecStart=/usr/bin/docker run -d \
   --name qdrant \
   --restart always \
-  -p 6333:6333 \
+  -p 0.0.0.0:6333:6333 \
   -v /mnt/temp-data/qdrant_data:/qdrant/storage \
   qdrant/qdrant:latest
+ExecStop=/usr/bin/docker stop qdrant
+ExecStopPost=/usr/bin/docker rm qdrant
+
+[Install]
+WantedBy=multi-user.target
+EOFSYSTEMD
+
+# Enable and start Qdrant service
+sudo systemctl daemon-reload
+sudo systemctl enable qdrant.service
+sudo systemctl start qdrant.service
 
 # Wait for Qdrant to start
-sleep 10
-echo "✅ Qdrant started and available at localhost:6333"
+sleep 15
+echo "✅ Qdrant started as systemd service and available at port 6333"
 
 # Setup Python environment
-cd /home/ec2-user/brew-master-ai
+cd /home/ubuntu/brew-master-ai
 python3 -m venv venv
 source venv/bin/activate
 
@@ -162,11 +191,11 @@ s3_output_prefix: "processed/"
 EOFCONFIG
 
 # Create processing scripts
-cat > /home/ec2-user/start_processing.sh << 'EOFSTART'
+cat > /home/ubuntu/start_processing.sh << 'EOFSTART'
 #!/bin/bash
 set -e
 echo "🍺 Starting processing..."
-cd /home/ec2-user/brew-master-ai
+cd /home/ubuntu/brew-master-ai
 source venv/bin/activate
 python3 -c "
 import boto3, sys, os
@@ -212,11 +241,11 @@ echo "✅ Processing completed"
 EOFSTART
 
 # Replace bucket placeholder
-sed -i "s/BUCKET_PLACEHOLDER/$S3_BUCKET_NAME/g" /home/ec2-user/start_processing.sh
-chmod +x /home/ec2-user/start_processing.sh
+sed -i "s/BUCKET_PLACEHOLDER/$S3_BUCKET_NAME/g" /home/ubuntu/start_processing.sh
+chmod +x /home/ubuntu/start_processing.sh
 
 # Create status script
-cat > /home/ec2-user/check_status.sh << 'EOFSTATUS'
+cat > /home/ubuntu/check_status.sh << 'EOFSTATUS'
 #!/bin/bash
 echo "🍺 Brew Master AI Status"
 echo "S3 Access: $(aws s3 ls s3://BUCKET_PLACEHOLDER/ > /dev/null 2>&1 && echo '✅ OK' || echo '❌ Failed')"
@@ -228,19 +257,19 @@ echo "Recent logs:"
 tail -5 /mnt/temp-data/logs/brew_master.log 2>/dev/null || echo "No logs yet"
 EOFSTATUS
 
-sed -i "s/BUCKET_PLACEHOLDER/$S3_BUCKET_NAME/g" /home/ec2-user/check_status.sh
-chmod +x /home/ec2-user/check_status.sh
+sed -i "s/BUCKET_PLACEHOLDER/$S3_BUCKET_NAME/g" /home/ubuntu/check_status.sh
+chmod +x /home/ubuntu/check_status.sh
 
 # Mark setup complete
-touch /home/ec2-user/setup_complete.flag
+touch /home/ubuntu/setup_complete.flag
 echo "🎉 Full setup completed!"
 FULLSETUP
 
 # Replace placeholder and run full setup
-sed -i "s/__S3_BUCKET_PLACEHOLDER__/$S3_BUCKET_NAME/g" /home/ec2-user/brew-master-ai/full_setup.sh
-chmod +x /home/ec2-user/brew-master-ai/full_setup.sh
+sed -i "s/__S3_BUCKET_PLACEHOLDER__/$S3_BUCKET_NAME/g" /home/ubuntu/brew-master-ai/full_setup.sh
+chmod +x /home/ubuntu/brew-master-ai/full_setup.sh
 
 # Run full setup in background (avoid user_data timeout)
-nohup /home/ec2-user/brew-master-ai/full_setup.sh > /var/log/full_setup.log 2>&1 &
+nohup /home/ubuntu/brew-master-ai/full_setup.sh > /var/log/full_setup.log 2>&1 &
 
 echo "✅ Bootstrap completed. Full setup running in background." 
