@@ -33,6 +33,17 @@ class InputProcessingConfig:
     whisper_condition_on_previous_text: bool = True  # Use context from previous segments
     whisper_initial_prompt: str = "Este es un audio sobre cerveza y técnicas de elaboración de cerveza artesanal."
     
+    # Additional whisper transcription parameters
+    whisper_best_of: Optional[int] = None  # Number of candidates when sampling with non-zero temperature
+    whisper_beam_size: Optional[int] = None  # Number of beams in beam search
+    whisper_patience: Optional[float] = None  # Patience value in beam decoding
+    whisper_length_penalty: Optional[float] = None  # Length penalty in beam decoding
+    whisper_suppress_tokens: Optional[str] = "-1"  # Comma-separated list of token ids to suppress
+    whisper_suppress_blank: bool = True  # Suppress blank outputs at the beginning of the sampling
+    whisper_word_timestamps: bool = False  # Extract word-level timestamps
+    whisper_prepend_punctuations: str = "¿¡"  # Punctuations to prepend to each segment
+    whisper_append_punctuations: str = ".!?,;:)]}"  # Punctuations to append to each segment
+    
     # Image/OCR processing
     ocr_language: str = 'eng'
     ocr_config: str = '--psm 6'  # Page segmentation mode
