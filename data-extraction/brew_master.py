@@ -22,8 +22,8 @@ from data_validator import DataQualityAnalyzer
 class BrewMasterCLI:
     """Main CLI application for Brew Master AI data processing"""
     
-    def __init__(self):
-        self.config_manager = ConfigManager()
+    def __init__(self, config_file: str = "config.yaml"):
+        self.config_manager = ConfigManager(config_file)
         self.config = None
         self.processor = None
         self.logger = None
@@ -376,6 +376,7 @@ Examples:
     # Add configuration override arguments to all parsers
     for subparser in [process_parser, audio_parser, transcribe_parser, images_parser, 
                      ocr_parser, embeddings_parser, validate_parser, cleanup_parser]:
+        subparser.add_argument('--config-file', help='YAML configuration file to load (default: config.yaml)')
         subparser.add_argument('--videos-dir', help='Directory containing video files')
         subparser.add_argument('--transcripts-dir', help='Directory for output transcripts')
         subparser.add_argument('--output-dir', help='Output directory (alias for transcripts-dir)')
@@ -390,8 +391,9 @@ Examples:
     # Convert args to dict for config loading
     cli_args = {k: v for k, v in vars(args).items() if v is not None and k != 'command'}
     
-    # Create CLI instance
-    cli = BrewMasterCLI()
+    # Create CLI instance with custom config file if specified
+    config_file = cli_args.get('config_file', 'config.yaml')
+    cli = BrewMasterCLI(config_file)
     
     # Handle config commands first
     if args.command == 'config':

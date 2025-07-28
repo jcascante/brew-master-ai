@@ -68,6 +68,8 @@ fi
 
 # Create directories
 mkdir -p /mnt/temp-data/{input,output,temp,logs,models,qdrant_data}
+sudo chown -R ubuntu:ubuntu /mnt/temp-data
+
 
 # Setup Qdrant vector database
 echo "🔍 Setting up Qdrant vector database..."
@@ -208,32 +210,32 @@ s3 = boto3.client('s3')
 bucket = 'BUCKET_PLACEHOLDER'
 
 # Download files
-os.makedirs('/mnt/temp-data/input', exist_ok=True)
+os.makedirs('/mnt/temp-data/input/videos', exist_ok=True)
 try:
-    objects = s3.list_objects_v2(Bucket=bucket, Prefix='input/')
+    objects = s3.list_objects_v2(Bucket=bucket, Prefix='input/videos')
     if 'Contents' in objects:
         for obj in objects['Contents']:
             if not obj['Key'].endswith('/'):
-                local_file = f\"/mnt/temp-data/input/{Path(obj['Key']).name}\"
+                local_file = f\"/mnt/temp-data/input/videos/{Path(obj['Key']).name}\"
                 s3.download_file(bucket, obj['Key'], local_file)
                 print(f'Downloaded: {obj[\"Key\"]}')
     
-    # Process if files exist
-    if os.listdir('/mnt/temp-data/input'):
-        cli = BrewMasterCLI()
-        # Use EC2-specific config file created during setup
-        cli.config_manager.config_file = 'data-extraction/config_ec2.yaml'
-        cli.setup({'videos_dir': '/mnt/temp-data/input', 'output_dir': '/mnt/temp-data/output'})
-        cli.process_pipeline('/mnt/temp-data/input', '/mnt/temp-data/output')
+    # Process if files exist, only videos. Disable, will be run manually.
+    # if os.listdir('/mnt/temp-data/input/videos'):
+    #     cli = BrewMasterCLI()
+    #     # Use EC2-specific config file created during setup
+    #     cli.config_manager.config_file = 'data-extraction/config_ec2.yaml'
+    #     cli.setup({'videos_dir': '/mnt/temp-data/input', 'output_dir': '/mnt/temp-data/output'})
+    #     cli.process_pipeline('/mnt/temp-data/input', '/mnt/temp-data/output')
         
-        # Upload results
-        os.makedirs('/mnt/temp-data/output', exist_ok=True)
-        for file in Path('/mnt/temp-data/output').glob('**/*'):
-            if file.is_file():
-                s3.upload_file(str(file), bucket, f'processed/{file.name}')
-                print(f'Uploaded: {file.name}')
-    else:
-        print('No files to process')
+    #     # Upload results
+    #     os.makedirs('/mnt/temp-data/output', exist_ok=True)
+    #     for file in Path('/mnt/temp-data/output').glob('**/*'):
+    #         if file.is_file():
+    #             s3.upload_file(str(file), bucket, f'processed/{file.name}')
+    #             print(f'Uploaded: {file.name}')
+    # else:
+    #     print('No files to process')
 except Exception as e:
     print(f'Error: {e}')
 "
